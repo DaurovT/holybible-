@@ -1,0 +1,14 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - data/**
+
+linter:
+  rules:
+    # Скрипты сборки данных в tool/ — консольные утилиты, вывод в stdout это
+    # их основной способ отчитаться о работе.
+    avoid_print: false
+    # Ключ запроса должен исчезать целиком, а не превращаться в null.
+    use_null_aware_elements: false

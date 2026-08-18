@@ -1,0 +1,71 @@
+name: holy_bible
+description: "Современное приложение для чтения Библии."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State
+  flutter_riverpod: ^2.6.1
+
+  # Data
+  sqlite3_flutter_libs: ^0.5.40
+  sqlite3: ^2.9.0
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  shared_preferences: ^2.5.3
+
+  # Navigation
+  go_router: ^16.2.4
+
+  # Feature support
+  http: ^1.5.0
+  share_plus: ^12.0.0
+  intl: ^0.20.2
+  collection: ^1.19.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  args: ^2.7.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    # Только сжатые: несжатые .db остаются на диске для инструментов сборки.
+    - assets/db/bible.db.gz
+    - assets/db/strongs.db.gz
+
+  fonts:
+    - family: Literata
+      fonts:
+        - asset: assets/fonts/Literata-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Literata-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Literata-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Literata-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Literata-Bold.ttf
+          weight: 700
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
