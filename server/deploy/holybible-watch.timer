@@ -1,0 +1,10 @@
+[Unit]
+Description=HolyBible: проверять бэкенд каждые пять минут
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

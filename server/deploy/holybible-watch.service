@@ -1,0 +1,8 @@
+[Unit]
+Description=HolyBible: проверка живости бэкенда
+
+[Service]
+Type=oneshot
+# Restart=always в самой службе поднимает упавший процесс, но не помогает,
+# когда процесс жив и не отвечает. Здесь проверяется именно ответ.
+ExecStart=/bin/bash -c 'curl -fsS --max-time 10 http://127.0.0.1:8099/health >/dev/null || (echo "бэкенд не отвечает, перезапускаю" && systemctl restart holybible-api)'

@@ -12,13 +12,16 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import 'device_attest.dart';
+
 /// Адрес бэкенда. Задаётся при сборке:
 /// `flutter run --dart-define=AI_ENDPOINT=https://…`
 const aiEndpoint = String.fromEnvironment('AI_ENDPOINT');
 
-/// Общий секрет с сервером: `--dart-define=AI_TOKEN=…`. Он не прячет ключ
-/// модели — тот и так остаётся на сервере, — а отсекает чужие запросы к
-/// адресу, за которые платил бы владелец сервера.
+/// Запасной общий секрет: `--dart-define=AI_TOKEN=…`. Нужен только там, где
+/// App Attest недоступен — в симуляторе. Он один на все копии приложения, из
+/// бандла его достанут, поэтому на сервере путь через него по умолчанию
+/// закрыт. Подлинность сборки доказывает App Attest, см. device_attest.dart.
 const aiToken = String.fromEnvironment('AI_TOKEN');
 
 class AiRequest {
@@ -82,8 +85,10 @@ class AiUnavailable implements Exception {
 }
 
 class AiService {
-  const AiService(this._client);
+  AiService(this._client) : _attest = DeviceAttest(_client, aiEndpoint);
+
   final http.Client _client;
+  final DeviceAttest _attest;
 
   bool get isConfigured => aiEndpoint.isNotEmpty;
 
@@ -95,19 +100,44 @@ class AiService {
         'кто и что упомянуто в отрывке и куда ведут параллельные места.',
       );
     }
-    final res = await _client.post(
+    var res = await _send(request);
+    if (res.statusCode == 401) {
+      // Пропуск просрочен или сервер забыл устройство — заводимся заново.
+      res = await _send(request, refresh: true);
+    }
+    if (res.statusCode != 200) throw AiUnavailable(_reason(res));
+    return AiAnswer.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>);
+  }
+
+  Future<http.Response> _send(AiRequest request, {bool refresh = false}) async {
+    final pass = await _attest.token(refresh: refresh);
+    return _client.post(
       Uri.parse('$aiEndpoint/explain'),
       headers: {
         'content-type': 'application/json',
-        if (aiToken.isNotEmpty) 'x-app-token': aiToken,
+        if (pass != null) 'authorization': 'Bearer $pass',
+        if (pass == null && aiToken.isNotEmpty) 'x-app-token': aiToken,
       },
       body: jsonEncode(request.toJson()),
     );
-    if (res.statusCode != 200) {
-      throw AiUnavailable('Сервер ответил ${res.statusCode}');
+  }
+
+  /// Сервер объясняет отказ по-русски — показываем это, а не код ошибки:
+  /// «слишком много разборов за час» читателю понятнее, чем «429».
+  String _reason(http.Response res) {
+    try {
+      final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final error = (j['error'] as String?)?.trim();
+      if (error != null && error.isNotEmpty) return error;
+    } on FormatException {
+      // Сервер ответил не JSON — ниже общий текст.
     }
-    return AiAnswer.fromJson(
-        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>);
+    if (res.statusCode == 401) {
+      return 'Не удалось подтвердить устройство. Разбор недоступен, '
+          'остальное приложение работает без сети.';
+    }
+    return 'Сервер ответил ${res.statusCode}';
   }
 }
 
