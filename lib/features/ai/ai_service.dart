@@ -16,6 +16,11 @@ import 'package:http/http.dart' as http;
 /// `flutter run --dart-define=AI_ENDPOINT=https://…`
 const aiEndpoint = String.fromEnvironment('AI_ENDPOINT');
 
+/// Общий секрет с сервером: `--dart-define=AI_TOKEN=…`. Он не прячет ключ
+/// модели — тот и так остаётся на сервере, — а отсекает чужие запросы к
+/// адресу, за которые платил бы владелец сервера.
+const aiToken = String.fromEnvironment('AI_TOKEN');
+
 class AiRequest {
   final String mode;
   final String instruction;
@@ -92,7 +97,10 @@ class AiService {
     }
     final res = await _client.post(
       Uri.parse('$aiEndpoint/explain'),
-      headers: const {'content-type': 'application/json'},
+      headers: {
+        'content-type': 'application/json',
+        if (aiToken.isNotEmpty) 'x-app-token': aiToken,
+      },
       body: jsonEncode(request.toJson()),
     );
     if (res.statusCode != 200) {

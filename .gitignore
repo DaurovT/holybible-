@@ -55,3 +55,8 @@ app.*.map.json
 /ios/Pods/
 /ios/.symlinks/
 /macos/Pods/
+
+# Бэкенд: окружение, база и логи в рабочей копии
+server/.venv/
+server/data/
+server/__pycache__/
