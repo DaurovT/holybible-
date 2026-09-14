@@ -152,6 +152,11 @@ class AiService {
   /// Сервер объясняет отказ по-русски — показываем это, а не код ошибки:
   /// «слишком много разборов за час» читателю понятнее, чем «429».
   String _reason(http.Response res) {
+    final problem = _attest.lastProblem;
+    if (res.statusCode == 401 && problem != null) {
+      return 'Не удалось подтвердить устройство — $problem. Разбор недоступен, '
+          'остальное приложение работает без сети.';
+    }
     try {
       final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       final error = (j['error'] as String?)?.trim();

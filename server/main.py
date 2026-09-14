@@ -131,6 +131,11 @@ async def health() -> dict[str, object]:
         'model': MODEL,
         'attest': ATTEST_READY,
         'appTokenAllowed': ALLOW_APP_TOKEN,
+        # Не секреты: команда и идентификатор есть в любой копии приложения.
+        # Зато по ним снаружи видно, с какой сборкой сервер согласится.
+        'teamId': TEAM_ID,
+        'bundleId': BUNDLE_ID,
+        'attestEnv': ATTEST_ENV,
         **store.stats(),
     }
 
@@ -178,8 +183,11 @@ async def register(req: RegisterRequest) -> JSONResponse:
             key_id, base64.b64decode(req.attestation), req.challenge.encode())
     except AttestError as e:
         log.warning('заверение отклонено: %s', e)
-        return JSONResponse({'error': 'Устройство не подтверждено'},
-                            status_code=401)
+        # Причина уходит клиенту: подделать заверение она не помогает, а без
+        # неё сбой настройки («не та среда», «другая команда») не отличить от
+        # чужого приложения.
+        return JSONResponse({'error': 'Устройство не подтверждено',
+                             'detail': str(e)}, status_code=401)
     except Exception as e:  # noqa: BLE001 — битый вход не должен ронять сервер
         log.warning('заверение не разобрано: %s', e)
         return JSONResponse({'error': 'Заверение не разобрано'}, status_code=400)
@@ -209,7 +217,8 @@ async def assert_key(req: AssertRequest) -> JSONResponse:
             req.challenge.encode(), counter)
     except AttestError as e:
         log.warning('подпись отклонена: %s', e)
-        return JSONResponse({'error': 'Подпись не принята'}, status_code=401)
+        return JSONResponse({'error': 'Подпись не принята', 'detail': str(e)},
+                            status_code=401)
     except Exception as e:  # noqa: BLE001
         log.warning('подпись не разобрана: %s', e)
         return JSONResponse({'error': 'Подпись не разобрана'}, status_code=400)

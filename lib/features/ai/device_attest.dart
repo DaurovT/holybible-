@@ -21,6 +21,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// базу устройств. Лечится повторным заверением.
 class _KeyForgotten implements Exception {}
 
+/// Шаг заверения не прошёл по понятной причине — она уходит в [lastProblem].
+class _Refused implements Exception {
+  _Refused(this.message);
+  final String message;
+}
+
 class DeviceAttest {
   DeviceAttest(this._client, this._endpoint);
 
@@ -37,6 +43,12 @@ class DeviceAttest {
   SharedPreferences? _cached;
   Future<SharedPreferences> get _prefs async =>
       _cached ??= await SharedPreferences.getInstance();
+
+  /// Почему последний раз не удалось получить пропуск. Без этого любой сбой —
+  /// другая команда в подписи, не та среда, отказ Apple, пропавшая сеть —
+  /// выглядит одинаково: «устройство не подтверждено», и чинить приходится
+  /// вслепую.
+  String? lastProblem;
 
   String? _token;
   DateTime? _expires;
@@ -65,7 +77,11 @@ class DeviceAttest {
         _expires!.isAfter(now.add(const Duration(minutes: 1)))) {
       return _token;
     }
-    if (!await supported) return null;
+    lastProblem = null;
+    if (!await supported) {
+      lastProblem = 'App Attest недоступен на этом устройстве';
+      return null;
+    }
 
     try {
       final prefs = await _prefs;
@@ -76,23 +92,26 @@ class DeviceAttest {
       } on _KeyForgotten {
         return await _register();
       }
-    } on PlatformException {
-      return null;
+    } on _Refused catch (e) {
+      lastProblem = e.message;
+    } on PlatformException catch (e) {
+      lastProblem = 'Apple: ${e.message ?? e.code}';
     } on http.ClientException {
-      return null;
+      lastProblem = 'нет связи с сервером';
     } on SocketException {
-      return null;
+      lastProblem = 'нет связи с сервером';
     } on TimeoutException {
-      return null;
+      lastProblem = 'сервер не ответил вовремя';
     } on FormatException {
-      return null;
+      lastProblem = 'непонятный ответ сервера';
     } on TypeError {
-      return null;
+      lastProblem = 'непонятный ответ сервера';
     } on _KeyForgotten {
       // Сервер не узнал ключ, который только что заверили. Второй круг здесь
       // не поможет — остаёмся без пропуска.
-      return null;
+      lastProblem = 'сервер не узнал ключ устройства';
     }
+    return null;
   }
 
   Future<String> _challenge() async {
@@ -100,7 +119,7 @@ class DeviceAttest {
         .post(Uri.parse('$_endpoint/attest/challenge'))
         .timeout(_timeout);
     if (res.statusCode != 200) {
-      throw http.ClientException('челлендж: ${res.statusCode}');
+      throw _Refused('челлендж: сервер ответил ${res.statusCode}');
     }
     return (jsonDecode(res.body) as Map<String, dynamic>)['challenge'] as String;
   }
@@ -108,12 +127,12 @@ class DeviceAttest {
   Future<String?> _register() async {
     final challenge = await _challenge();
     final keyId = await _channel.invokeMethod<String>('generateKey');
-    if (keyId == null) return null;
+    if (keyId == null) throw _Refused('Apple не выдал ключ');
     final attestation = await _channel.invokeMethod<String>('attestKey', {
       'keyId': keyId,
       'challenge': challenge,
     });
-    if (attestation == null) return null;
+    if (attestation == null) throw _Refused('Apple не заверил ключ');
     final saved = await _post('/attest/register', {
       'keyId': keyId,
       'attestation': attestation,
@@ -129,7 +148,7 @@ class DeviceAttest {
       'keyId': keyId,
       'challenge': challenge,
     });
-    if (assertion == null) return null;
+    if (assertion == null) throw _Refused('Apple не подписал запрос');
     return _post('/attest/assert', {
       'keyId': keyId,
       'assertion': assertion,
@@ -144,7 +163,18 @@ class DeviceAttest {
       body: jsonEncode(body),
     ).timeout(_timeout);
     if (res.statusCode == 404) throw _KeyForgotten();
-    if (res.statusCode != 200) return null;
+    if (res.statusCode != 200) {
+      // Сервер пишет, что именно не сошлось («сборка не из той среды»,
+      // «заверение выдано другому приложению»), — это и нужно показать.
+      String? why;
+      try {
+        final j =
+            jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+        why = (j['detail'] ?? j['error']) as String?;
+      } catch (_) {}
+      final step = path.endsWith('register') ? 'заверение' : 'подпись';
+      throw _Refused('$step: ${why ?? 'сервер ответил ${res.statusCode}'}');
+    }
     final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     _token = j['token'] as String?;
     _expires = DateTime.now()
