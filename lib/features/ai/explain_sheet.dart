@@ -93,7 +93,50 @@ class _ExplainSheetState extends ConsumerState<_ExplainSheet> {
     super.dispose();
   }
 
-  Future<void> _ask(String prompt) async {
+  static const _consentKey = 'ai_consent_v1';
+
+  /// Согласие на отправку отрывка в ИИ.
+  ///
+  /// Ответ пишет модель на стороннем сервере, а вопрос читателя может
+  /// содержать что угодно. Apple требует прямо сказать, куда уходят данные, и
+  /// спросить разрешения до первой отправки (правило 5.1.2) — спрашиваем один
+  /// раз и запоминаем ответ.
+  Future<bool> _consented() async {
+    final prefs = await ref.read(prefsProvider.future);
+    if (prefs.getBool(_consentKey) ?? false) return true;
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Разбор с помощью ИИ'),
+        content: const Text(
+          'Ответ составляет языковая модель OpenAI в облаке Microsoft Azure. '
+          'Для этого на сервер приложения уйдёт выделенный отрывок и ваш '
+          'вопрос — выбранный из списка или написанный самостоятельно.\n\n'
+          'Закладки, заметки и выделения никуда не отправляются. Имени, почты '
+          'и местоположения приложение не спрашивает.\n\n'
+          'ИИ может ошибаться: сверяйтесь с источниками под ответом.\n\n'
+          'Подробнее: holybible-api.eastus.cloudapp.azure.com/privacy',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Не сейчас')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Разрешить')),
+        ],
+      ),
+    );
+    if (ok != true) return false;
+    await prefs.setBool(_consentKey, true);
+    return true;
+  }
+
+  Future<void> _ask(String raw) async {
+    final prompt = raw.trim();
+    if (prompt.isEmpty || _loading) return;
+    if (!await _consented() || !mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -101,6 +144,7 @@ class _ExplainSheetState extends ConsumerState<_ExplainSheet> {
     });
     try {
       final entities = await _entities();
+      if (!mounted) return;
       final answer = await ref.read(aiServiceProvider).explain(
             AiRequest(
               mode: widget.mode.name,
@@ -112,8 +156,14 @@ class _ExplainSheetState extends ConsumerState<_ExplainSheet> {
             ),
           );
       if (mounted) setState(() => _answer = answer);
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+    } on AiUnavailable catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      // Сырой текст исключения — английский и с адресом сервера; читателю он
+      // ничего не скажет.
+      if (mounted) {
+        setState(() => _error = 'Не удалось получить разбор. Попробуйте ещё раз.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -126,8 +176,8 @@ class _ExplainSheetState extends ConsumerState<_ExplainSheet> {
         for (final m in v.mentions)
           if (m.confidence >= 0.2) m.entityId
     };
-    final list = db.entities(ids.toList());
-    list.sort((a, b) => b.refCount.compareTo(a.refCount));
+    final list = [...db.entities(ids.toList())]
+      ..sort((a, b) => b.refCount.compareTo(a.refCount));
     return list;
   }
 
@@ -230,11 +280,20 @@ class _ExplainSheetState extends ConsumerState<_ExplainSheet> {
                 controller: _question,
                 minLines: 1,
                 maxLines: 4,
+                // Многострочное поле по умолчанию превращает Return в перенос
+                // строки, и onSubmitted не вызывается никогда — вопрос было
+                // просто нечем отправить.
+                textInputAction: TextInputAction.send,
                 style: TextStyle(
                     fontFamily: 'Inter', fontSize: 15, color: c.text),
                 decoration: InputDecoration(
                   hintText: 'Например: почему именно «нищие»?',
                   hintStyle: TextStyle(color: c.faint, fontFamily: 'Inter'),
+                  suffixIcon: IconButton(
+                    tooltip: 'Спросить',
+                    icon: Icon(Icons.arrow_upward_rounded, color: c.accent),
+                    onPressed: () => _ask(_question.text),
+                  ),
                   filled: true,
                   fillColor: c.background,
                   border: OutlineInputBorder(
@@ -327,6 +386,9 @@ class _AnswerView extends ConsumerWidget {
                 fontSize: s.fontSize * 0.92,
                 height: 1.6,
                 color: c.text)),
+        const SizedBox(height: 10),
+        Text('Ответ составлен ИИ и может содержать ошибки.',
+            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: c.faint)),
         if (answer.citations.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text('ИСТОЧНИКИ ОТВЕТА',

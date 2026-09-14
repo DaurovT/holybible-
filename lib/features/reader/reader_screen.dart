@@ -1,8 +1,9 @@
 /// Экран чтения.
 ///
-/// Лента непрерывна: главы идут одна за другой без перелистывания и без
-/// кнопок «дальше». Это главное отличие от типовых читалок, где каждая глава
-/// живёт отдельным экраном и чтение постоянно спотыкается о навигацию.
+/// По умолчанию лента непрерывна: главы идут одна за другой без перелистывания
+/// и без кнопок «дальше» — чтение не спотыкается о навигацию. Кому привычнее
+/// перелистывать, в настройках включает страницы: глава на экран, следующая —
+/// свайпом справа налево. Оба способа делят один и тот же рендер главы.
 library;
 
 import 'dart:async';
@@ -52,6 +53,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   /// без этой стопки дорогу назад приходится искать руками.
   final _history = <ReadingPosition>[];
 
+  /// Постраничный режим. Контроллер заводится с той главы, которая сейчас
+  /// перед глазами, и пересоздаётся при каждом возврате в этот режим: старый
+  /// к тому времени отвязан от экрана и помнит только свою первую страницу.
+  PageController? _pager;
+
   /// Стих, к которому только что перешли: его надо подвести под глаз и
   /// ненадолго подсветить, иначе человек оказывается в начале главы и сам
   /// ищет, куда он, собственно, шёл.
@@ -62,6 +68,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   @override
   void dispose() {
+    _pager?.dispose();
     _focusTimer?.cancel();
     _controller.dispose();
     super.dispose();
@@ -132,6 +139,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     ref.read(recentPlacesProvider.notifier).remember(bookId, chapter);
     // Лента перестраивается вокруг новой опоры, поэтому прокрутку сбрасываем.
     if (_controller.hasClients) _controller.jumpTo(0);
+    if (_pager?.hasClients ?? false) _pager!.jumpToPage(i);
 
     if (vkey != null) {
       _focusTimer = Timer(const Duration(seconds: 4), () {
@@ -147,8 +155,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final ctx = _focusKey.currentContext;
     if (ctx == null) return;
     _focusScrolled = true;
-    Scrollable.ensureVisible(
-      ctx,
+    // Двигаем только ближайшую прокрутку. Scrollable.ensureVisible тянет все
+    // по цепочке, и в постраничном режиме вместе с главой дёргалась бы вбок
+    // сама страница.
+    final box = ctx.findRenderObject();
+    if (box == null) return;
+    Scrollable.of(ctx).position.ensureVisible(
+      box,
       alignment: 0.18,
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOut,
@@ -262,6 +275,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         error: (e, st) => Center(child: Text('Не удалось открыть текст: $e')),
         data: (index) {
           _setAnchorFromPosition(index);
+          if (settings.layout == ReaderLayout.pages) {
+            return _pagesView(index, settings, userData);
+          }
           return NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n is ScrollUpdateNotification) _updateVisible(index);
@@ -306,6 +322,63 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           );
         },
       ),
+    );
+  }
+
+  /// Глава на всю страницу, следующая — свайпом справа налево.
+  Widget _pagesView(List<(Book, int)> index, ReadingSettings settings,
+      UserData userData) {
+    if (_pager == null || !_pager!.hasClients) {
+      // Опора ленты стоит там, откуда ленту строили, а читает человек уже
+      // другую главу. Страницы открываем с той, что была перед глазами.
+      final visible = index.indexWhere(
+          (e) => e.$1.id == _visibleBook?.id && e.$2 == _visibleChapter);
+      if (visible >= 0) _anchor = visible;
+      final old = _pager;
+      _pager = PageController(initialPage: _anchor);
+      // Старый освобождаем после кадра: в этом кадре он ещё может числиться
+      // за уходящим PageView.
+      if (old != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+      }
+    }
+
+    return Stack(
+      children: [
+        PageView.builder(
+          controller: _pager,
+          itemCount: index.length,
+          onPageChanged: (i) {
+            if (i < 0 || i >= index.length) return;
+            final (book, chapter) = index[i];
+            setState(() {
+              _anchor = i;
+              _visibleBook = book;
+              _visibleChapter = chapter;
+              // Выделение живёт в пределах видимого текста: уехав со страницы,
+              // человек уже не видит, что именно выделено.
+              _selected.clear();
+            });
+            ref.read(positionProvider.notifier).set(book.id, chapter);
+          },
+          itemBuilder: (ctx, i) => SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 4, bottom: 150),
+            child: _chapterAt(index, i, settings, userData),
+          ),
+        ),
+        if (_selected.isNotEmpty)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: PassageActionsBar(
+              verses: _selected.values.toList()
+                ..sort((a, b) => a.vkey.compareTo(b.vkey)),
+              book: _visibleBook,
+              onClose: () => setState(_selected.clear),
+            ),
+          ),
+      ],
     );
   }
 
@@ -425,6 +498,7 @@ class _ChapterView extends ConsumerWidget {
                 Widget w = ReaderParagraph(
                   block: b,
                   settings: settings,
+                  chapterNumber: identical(b, blocks.first) ? chapter : null,
                   selectedVerses: selectedNumbers,
                   highlights: userData.tints,
                   notedVerses: noted,
@@ -452,7 +526,10 @@ class _ChapterView extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _ChapterHeader(
-                      book: book, chapter: chapter, settings: settings),
+                      book: book,
+                      chapter: chapter,
+                      settings: settings,
+                      showNumber: false),
                   ...paragraphs,
                   const SizedBox(height: 26),
                 ],
@@ -622,6 +699,7 @@ class _ChapterHeader extends StatelessWidget {
     required this.chapter,
     required this.settings,
     this.parallelLabel,
+    this.showNumber = true,
   });
 
   final Book book;
@@ -632,6 +710,11 @@ class _ChapterHeader extends StatelessWidget {
   /// а не у каждого стиха.
   final String? parallelLabel;
 
+  /// Крупная цифра главы. В обычном чтении её рисует первый абзац — цифра
+  /// стоит перед первым словом. В параллельном режиме абзацев нет, и номер
+  /// остаётся в шапке.
+  final bool showNumber;
+
   @override
   Widget build(BuildContext context) {
     final c = settings.colors;
@@ -639,7 +722,10 @@ class _ChapterHeader extends StatelessWidget {
     // крупной цифры, как в печатном издании.
     final showBookName = chapter == 1;
     return Padding(
-      padding: EdgeInsets.only(top: showBookName ? 40 : 30, bottom: 6),
+      padding: EdgeInsets.only(
+        top: showBookName ? 40 : (showNumber ? 30 : 22),
+        bottom: showNumber ? 6 : 0,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -654,18 +740,19 @@ class _ChapterHeader extends StatelessWidget {
                 color: c.text,
               ),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: showNumber ? 18 : 4),
           ],
-          Text(
-            '$chapter',
-            style: TextStyle(
-              fontFamily: 'Literata',
-              fontSize: settings.fontSize * 2.1,
-              fontWeight: FontWeight.w500,
-              height: 1.0,
-              color: c.faint,
+          if (showNumber)
+            Text(
+              '$chapter',
+              style: TextStyle(
+                fontFamily: 'Literata',
+                fontSize: settings.fontSize * 2.1,
+                fontWeight: FontWeight.w500,
+                height: 1.0,
+                color: c.faint,
+              ),
             ),
-          ),
           if (parallelLabel != null) ...[
             const SizedBox(height: 10),
             Text(

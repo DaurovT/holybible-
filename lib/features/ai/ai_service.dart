@@ -7,7 +7,9 @@
 /// подставляет выдуманный ответ.
 library;
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -100,15 +102,39 @@ class AiService {
         'кто и что упомянуто в отрывке и куда ведут параллельные места.',
       );
     }
-    var res = await _send(request);
-    if (res.statusCode == 401) {
-      // Пропуск просрочен или сервер забыл устройство — заводимся заново.
-      res = await _send(request, refresh: true);
+    try {
+      var res = await _send(request);
+      if (res.statusCode == 401) {
+        // Пропуск просрочен или сервер забыл устройство — заводимся заново.
+        res = await _send(request, refresh: true);
+      }
+      if (res.statusCode != 200) throw AiUnavailable(_reason(res));
+      return AiAnswer.fromJson(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>);
+    } on TimeoutException {
+      throw const AiUnavailable(
+          'Сервер не ответил вовремя. Попробуйте ещё раз — '
+          'остальное приложение работает без сети.');
+    } on SocketException {
+      throw const AiUnavailable(_offline);
+    } on http.ClientException {
+      throw const AiUnavailable(_offline);
+    } on FormatException {
+      throw const AiUnavailable(_garbled);
+    } on TypeError {
+      // JSON разобрался, но не того вида: прокси или страница входа в Wi-Fi.
+      throw const AiUnavailable(_garbled);
     }
-    if (res.statusCode != 200) throw AiUnavailable(_reason(res));
-    return AiAnswer.fromJson(
-        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>);
   }
+
+  static const _offline = 'Нет связи с сервером. Разбору нужен интернет, '
+      'а текст, поиск и карточки работают и так.';
+  static const _garbled =
+      'Сервер прислал непонятный ответ. Попробуйте позже.';
+
+  /// Сколько ждать разбора. Модель отвечает за секунды, но без предела запрос
+  /// в метро висит бесконечно, и панель так и крутит индикатор.
+  static const _timeout = Duration(seconds: 60);
 
   Future<http.Response> _send(AiRequest request, {bool refresh = false}) async {
     final pass = await _attest.token(refresh: refresh);
@@ -120,7 +146,7 @@ class AiService {
         if (pass == null && aiToken.isNotEmpty) 'x-app-token': aiToken,
       },
       body: jsonEncode(request.toJson()),
-    );
+    ).timeout(_timeout);
   }
 
   /// Сервер объясняет отказ по-русски — показываем это, а не код ошибки:
@@ -130,8 +156,8 @@ class AiService {
       final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       final error = (j['error'] as String?)?.trim();
       if (error != null && error.isNotEmpty) return error;
-    } on FormatException {
-      // Сервер ответил не JSON — ниже общий текст.
+    } catch (_) {
+      // Сервер ответил не JSON или JSON не того вида — ниже общий текст.
     }
     if (res.statusCode == 401) {
       return 'Не удалось подтвердить устройство. Разбор недоступен, '

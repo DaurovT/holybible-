@@ -9,7 +9,9 @@
 /// настройках. Дальше на каждый пропуск подписывается свежий челлендж сервера.
 library;
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -24,6 +26,10 @@ class DeviceAttest {
 
   static const _channel = MethodChannel('holybible/app_attest');
   static const _keyIdPref = 'attest_key_id';
+
+  /// Предел ожидания на каждый шаг заверения: без него пропавшая сеть
+  /// подвешивает разбор навсегда.
+  static const _timeout = Duration(seconds: 20);
 
   final http.Client _client;
   final String _endpoint;
@@ -74,11 +80,25 @@ class DeviceAttest {
       return null;
     } on http.ClientException {
       return null;
+    } on SocketException {
+      return null;
+    } on TimeoutException {
+      return null;
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    } on _KeyForgotten {
+      // Сервер не узнал ключ, который только что заверили. Второй круг здесь
+      // не поможет — остаёмся без пропуска.
+      return null;
     }
   }
 
   Future<String> _challenge() async {
-    final res = await _client.post(Uri.parse('$_endpoint/attest/challenge'));
+    final res = await _client
+        .post(Uri.parse('$_endpoint/attest/challenge'))
+        .timeout(_timeout);
     if (res.statusCode != 200) {
       throw http.ClientException('челлендж: ${res.statusCode}');
     }
@@ -122,7 +142,7 @@ class DeviceAttest {
       Uri.parse('$_endpoint$path'),
       headers: const {'content-type': 'application/json'},
       body: jsonEncode(body),
-    );
+    ).timeout(_timeout);
     if (res.statusCode == 404) throw _KeyForgotten();
     if (res.statusCode != 200) return null;
     final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;

@@ -26,27 +26,40 @@ void main() {
   });
 
   group('подвижные праздники', () {
+    // Сдвиг по календарю, а не длительностью: в поясах с переходом на летнее
+    // время сутки бывают по 23 и 25 часов, и сам тест съезжал бы на день.
+    DateTime shift(DateTime d, int days) => DateTime(d.year, d.month, d.day + days);
+
     test('отсчитываются от своей Пасхи', () {
       final easter = orthodoxEaster(2026);
       expect(
-        feastsOn(easter.subtract(const Duration(days: 7)),
-                ChurchTradition.orthodox)
+        feastsOn(shift(easter, -7), ChurchTradition.orthodox)
             .first
             .name,
         contains('Вход Господень'),
       );
       expect(
-        feastsOn(easter.add(const Duration(days: 49)),
-                ChurchTradition.orthodox)
+        feastsOn(shift(easter, 49), ChurchTradition.orthodox)
             .first
             .name,
         contains('Пятидесятница'),
       );
     });
 
+    test('не съезжают на день там, где переводят часы', () {
+      // В 2026 году Европа переходит на летнее время 29 марта — ровно в
+      // западное Вербное воскресенье. Прежний расчёт через Duration ставил
+      // праздник на 28-е. В Москве часы не переводят и ошибки не видно,
+      // поэтому файл гоняется ещё и с TZ=Europe/Berlin.
+      const t = ChurchTradition.catholic;
+      expect(feastsOn(DateTime(2026, 3, 29), t), isNotEmpty);
+      expect(feastsOn(DateTime(2026, 3, 28), t), isEmpty);
+      expect(nextFeast(DateTime(2026, 3, 27), t)?.date, DateTime(2026, 3, 29));
+    });
+
     test('у западных традиций та же Пятидесятница, но своя дата', () {
-      final west = gregorianEaster(2026).add(const Duration(days: 49));
-      final east = orthodoxEaster(2026).add(const Duration(days: 49));
+      final west = shift(gregorianEaster(2026), 49);
+      final east = shift(orthodoxEaster(2026), 49);
       expect(feastsOn(west, ChurchTradition.catholic), isNotEmpty);
       expect(feastsOn(west, ChurchTradition.orthodox), isEmpty);
       expect(east, isNot(west));

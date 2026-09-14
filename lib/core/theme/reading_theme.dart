@@ -31,6 +31,21 @@ enum EntityHintLevel {
   final String title;
 }
 
+/// Как устроено движение по тексту.
+///
+/// Лента — исходная ставка приложения: главы идут одна за другой, чтение не
+/// спотыкается о навигацию. Но привычка к перелистыванию сильнее доводов, и
+/// человеку, который читает по главе в день, конец главы важен как остановка.
+/// Поэтому оба способа живут рядом и выбираются в настройках.
+enum ReaderLayout {
+  feed('Лента', 'Главы идут одна за другой, листается прокруткой'),
+  pages('Страницы', 'Глава — страница, свайп справа налево — следующая');
+
+  const ReaderLayout(this.title, this.hint);
+  final String title;
+  final String hint;
+}
+
 @immutable
 class ReadingColors {
   final Color background;
@@ -174,6 +189,8 @@ class ReadingSettings {
   /// Иначе каждый стих с новой строки, как в учебном издании.
   final bool paragraphMode;
 
+  final ReaderLayout layout;
+
   final bool showVerseNumbers;
   final bool showWordsOfJesus;
   final bool showFootnotes;
@@ -186,6 +203,7 @@ class ReadingSettings {
     this.maxLineWidth = 620,
     this.fontFamily = 'Literata',
     this.paragraphMode = true,
+    this.layout = ReaderLayout.feed,
     this.showVerseNumbers = true,
     this.showWordsOfJesus = true,
     this.showFootnotes = true,
@@ -203,6 +221,7 @@ class ReadingSettings {
     double? maxLineWidth,
     String? fontFamily,
     bool? paragraphMode,
+    ReaderLayout? layout,
     bool? showVerseNumbers,
     bool? showWordsOfJesus,
     bool? showFootnotes,
@@ -215,6 +234,7 @@ class ReadingSettings {
         maxLineWidth: maxLineWidth ?? this.maxLineWidth,
         fontFamily: fontFamily ?? this.fontFamily,
         paragraphMode: paragraphMode ?? this.paragraphMode,
+        layout: layout ?? this.layout,
         showVerseNumbers: showVerseNumbers ?? this.showVerseNumbers,
         showWordsOfJesus: showWordsOfJesus ?? this.showWordsOfJesus,
         showFootnotes: showFootnotes ?? this.showFootnotes,
@@ -227,6 +247,7 @@ class ReadingSettings {
         'lineHeightScale': lineHeightScale,
         'fontFamily': fontFamily,
         'paragraphMode': paragraphMode,
+        'layout': layout.name,
         'showVerseNumbers': showVerseNumbers,
         'showWordsOfJesus': showWordsOfJesus,
         'showFootnotes': showFootnotes,
@@ -241,6 +262,8 @@ class ReadingSettings {
         lineHeightScale: (j['lineHeightScale'] as num?)?.toDouble() ?? 1.0,
         fontFamily: j['fontFamily'] as String? ?? 'Literata',
         paragraphMode: j['paragraphMode'] as bool? ?? true,
+        layout: ReaderLayout.values.firstWhere((e) => e.name == j['layout'],
+            orElse: () => ReaderLayout.feed),
         showVerseNumbers: j['showVerseNumbers'] as bool? ?? true,
         showWordsOfJesus: j['showWordsOfJesus'] as bool? ?? true,
         showFootnotes: j['showFootnotes'] as bool? ?? true,

@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/reading_theme.dart';
@@ -26,6 +27,11 @@ class BibleApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Библия',
       debugShowCheckedModeBanner: false,
+      // Без этого системные подписи — меню «Copy / Paste», кнопки диалогов —
+      // остаются английскими посреди русского интерфейса.
+      locale: const Locale('ru'),
+      supportedLocales: const [Locale('ru')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: buildTheme(settings),
       home: const _Shell(),
     );

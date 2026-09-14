@@ -45,7 +45,10 @@ extension EntityQueries on BibleDatabase {
   /// Несколько сущностей разом — для панели под стихом, где нажимаемых слов
   /// может быть несколько.
   List<BibleEntity> entities(List<String> ids) {
-    if (ids.isEmpty) return const [];
+    // Пустой ответ тоже изменяемый: списки сущностей вызывающие сортируют, а
+    // `const []` на этом падает — «Cannot modify an unmodifiable list». Стих
+    // без единой распознанной сущности встречается сплошь и рядом.
+    if (ids.isEmpty) return [];
     final ph = List.filled(ids.length, '?').join(',');
     return [
       for (final r in raw
@@ -160,7 +163,7 @@ extension EntityQueries on BibleDatabase {
   /// Поиск сущности по имени — для строки поиска в «Исследовать».
   List<BibleEntity> searchEntities(String query, {int limit = 40}) {
     final q = query.trim();
-    if (q.length < 2) return const [];
+    if (q.length < 2) return [];
     // Префиксный запрос: пользователь набирает имя по буквам.
     final match = '"${q.replaceAll('"', '')}"*';
     return [

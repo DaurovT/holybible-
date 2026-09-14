@@ -165,15 +165,28 @@ test/        39 тестов: user.db, разбор ссылок, USFM, кале
 
 Перед публикацией, по порядку:
 
-1. **Посмотреть App Attest на живом iPhone.** Единственное, что нельзя было
-   проверить на сервере: заверение подписывает настоящее устройство. Разбор
+1. **Войти в Xcode под аккаунтом PHARMIQ ACADEMY** (Settings → Accounts).
+   Команда `XQ35SJRLQH` уже прописана в проекте, подпись автоматическая.
+2. **Обновить сервер.** В `server/privacy.html` вписать почту для связи вместо
+   `ПОЧТА_ДЛЯ_СВЯЗИ`, выложить `main.py`, `privacy.html` и
+   `deploy/holybible-api.service`, в `~/.holybible.env` поставить
+   `APPLE_TEAM_ID=XQ35SJRLQH`. Без этого App Attest отклонит все устройства:
+   он сверяет команду, которой подписана сборка.
+3. **Проверить App Attest на живом iPhone** сборкой новой команды — заверение
+   подписывает настоящее устройство, на сервере это не проверить. Разбор
    заверения покрыт [server/test_attest.py](server/test_attest.py) на
-   самодельных ключах, но первую сборку надо увидеть глазами.
-2. **Закрыть запасной путь**: `ALLOW_APP_TOKEN=0` и `ATTEST_ENV=production` в
-   `~/.holybible.env`. Пока он открыт — на время, чтобы осечка в App Attest не
-   остановила работу.
-3. Изображения и иконография из Wikimedia (для карточек людей и мест).
-4. Святые по дням и раздел «История».
+   самодельных ключах. После проверки закрыть запасной путь:
+   `ALLOW_APP_TOKEN=0`.
+4. **App Store Connect.** Анкета App Privacy — ровно по
+   [ios/Runner/PrivacyInfo.xcprivacy](ios/Runner/PrivacyInfo.xcprivacy);
+   ссылка на политику — `https://holybible-api.eastus.cloudapp.azure.com/privacy`;
+   скриншоты только для iPhone; сборка через TestFlight:
+
+       flutter build ipa --release \
+         --dart-define=AI_ENDPOINT=https://holybible-api.eastus.cloudapp.azure.com
+
+5. Изображения и иконография из Wikimedia (для карточек людей и мест).
+6. Святые по дням и раздел «История».
 
 В планах, но не сейчас — сборка под Android и адаптивная иконка. Планы чтения,
 маршруты на карте и резервная копия заметок сняты с очереди 19 августа.

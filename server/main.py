@@ -19,11 +19,12 @@ import logging
 import os
 import secrets
 import time
+from pathlib import Path
 
 import httpx
 import jwt
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from attest import AppAttest, AttestError
@@ -132,6 +133,17 @@ async def health() -> dict[str, object]:
         'appTokenAllowed': ALLOW_APP_TOKEN,
         **store.stats(),
     }
+
+
+# Политика конфиденциальности. App Store требует ссылку на неё, а своего сайта
+# у приложения нет — отдаём страницу отсюда же, с того адреса, куда и так ходит
+# разбор.
+PRIVACY_HTML = Path(__file__).with_name('privacy.html')
+
+
+@app.get('/privacy', response_class=HTMLResponse)
+async def privacy() -> HTMLResponse:
+    return HTMLResponse(PRIVACY_HTML.read_text(encoding='utf-8'))
 
 
 # --- App Attest ------------------------------------------------------------

@@ -19,18 +19,28 @@ import 'models.dart';
 ///
 /// Потоком, а не целиком в память: распакованная база — это десятки мегабайт,
 /// и держать их в памяти ради одной записи на диск незачем.
+///
+/// Распаковка идёт во временный файл, а рабочее имя он получает только в самом
+/// конце. Иначе приложение, закрытое посреди первого запуска, оставит обрезанную
+/// базу под рабочим именем: раз файл есть, распаковка больше не повторится, и
+/// текст не откроется до переустановки. Недописанный `.part` уберёт чистка
+/// старых версий — его имя начинается так же.
 Future<void> unpackAsset(String asset, File target) async {
   final data = await rootBundle.load(asset);
   final packed = File('${target.path}.gz');
-  await packed.writeAsBytes(data.buffer.asUint8List(), flush: true);
-  await packed.openRead().transform(gzip.decoder).pipe(target.openWrite());
+  final partial = File('${target.path}.part');
+  await packed.writeAsBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      flush: true);
+  await packed.openRead().transform(gzip.decoder).pipe(partial.openWrite());
   await packed.delete();
+  await partial.rename(target.path);
 }
 
 /// Меняется при пересборке assets/db/bible.db. Несовпадение версии
 /// перезаписывает копию — иначе после обновления приложения пользователь
 /// останется со старым текстом.
-const bibleDbVersion = 9;
+const bibleDbVersion = 10;
 
 class BibleDatabase {
   BibleDatabase._(this._db);

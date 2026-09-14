@@ -102,6 +102,7 @@ class ReaderParagraph extends StatefulWidget {
     required this.block,
     required this.settings,
     required this.selectedVerses,
+    this.chapterNumber,
     this.highlights = const {},
     this.notedVerses = const {},
     this.focusedVerses = const {},
@@ -115,6 +116,11 @@ class ReaderParagraph extends StatefulWidget {
   final ReaderBlock block;
   final ReadingSettings settings;
   final Set<int> selectedVerses;
+
+  /// Номер главы, если абзац — первый в ней. Цифра встаёт в начало текста, а
+  /// не отдельной строкой над ним: так делают печатные издания, и так глава не
+  /// съедает пол-экрана перед первым словом.
+  final int? chapterNumber;
 
   /// Цвет выделения по ключу стиха.
   final Map<int, HighlightTint> highlights;
@@ -241,6 +247,20 @@ class _ReaderParagraphState extends State<ReaderParagraph> {
     // стиха приходят из разных мест, и без этого следа в абзаце появляются
     // двойные пробелы, а строка может начаться с отбивки.
     var lastChar = '';
+
+    if (widget.chapterNumber != null) {
+      final label = '${widget.chapterNumber} ';
+      children.add(TextSpan(
+        text: label,
+        style: baseStyle.copyWith(
+          fontSize: s.fontSize * 1.45,
+          fontWeight: FontWeight.w600,
+          height: 1.0,
+        ),
+      ));
+      offset += label.length;
+      lastChar = ' ';
+    }
 
     for (var pi = 0; pi < widget.block.pieces.length; pi++) {
       final piece = widget.block.pieces[pi];

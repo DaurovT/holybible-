@@ -44,7 +44,7 @@ extension CrossRefQueries on BibleDatabase {
     List<int> fromVkeys, {
     int limit = 30,
   }) {
-    if (fromVkeys.isEmpty) return const [];
+    if (fromVkeys.isEmpty) return [];
     final ph = List.filled(fromVkeys.length, '?').join(',');
     final rows = raw.select('''
       SELECT to_vkey, span, MAX(votes) votes
@@ -54,7 +54,7 @@ extension CrossRefQueries on BibleDatabase {
       ORDER BY votes DESC
       LIMIT ?
     ''', [...fromVkeys, limit]);
-    if (rows.isEmpty) return const [];
+    if (rows.isEmpty) return [];
 
     // Ключ стиха собран как «книга * 1000000 + глава * 1000 + стих», поэтому
     // соседний стих — это +1. Диапазон через границу главы так не растянуть,

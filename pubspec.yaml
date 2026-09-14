@@ -1,7 +1,7 @@
 name: holy_bible
 description: "Современное приложение для чтения Библии."
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.9.0

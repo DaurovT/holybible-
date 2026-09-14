@@ -234,6 +234,7 @@ void main(List<String> args) {
   sdb.dispose();
 
   _transferWordsOfJesus(db);
+  _transferParagraphs(db);
 
   db.execute(indexes);
   db.execute('INSERT INTO verse_fts(verse_fts) VALUES(\'optimize\')');
@@ -247,6 +248,54 @@ void main(List<String> args) {
   stdout.writeln('\nbible.db   $mb МБ');
   stdout.writeln('strongs.db $smb МБ — $strongCount привязок, '
       'подключается по требованию');
+}
+
+/// Переносит границы абзацев на переводы, где их нет.
+///
+/// В Синодальном USFM абзацев нет вовсе: маркер `\p` стоит по одному на главу
+/// (28 на всё Евангелие от Матфея), а `\m` — это печатная строка бумажного
+/// издания, она рвёт текст посреди фразы и даже посреди слова. Из-за этого
+/// глава прозы шла сплошным полотном без единого отступа. В WEB разметка
+/// настоящая — 422 абзаца в том же Матфее, — и границы совпадают с делением
+/// повествования, а не с языком: смена сцены, новая реплика, новый эпизод.
+///
+/// Переносим только начало абзаца и только на границе стиха: это то деление,
+/// которое не зависит от порядка слов. Стихи, размеченные как поэзия
+/// (Псалтирь и Притчи — 2526 строк только в Псалтири), уже имеют собственные
+/// разрывы, и трогать их не нужно.
+void _transferParagraphs(Database db) {
+  final starts = <int>{};
+  for (final row in db.select("""
+      SELECT vkey, segments FROM verses
+      WHERE translation_id = 'web' AND segments LIKE '%"b":1%'
+    """)) {
+    final segs = jsonDecode(row['segments'] as String) as List;
+    if (segs.isEmpty) continue;
+    final first = segs.first as Map;
+    // Разрыв должен открывать сам стих: абзац, начавшийся посреди стиха, на
+    // другом языке приходится на другое место.
+    if (first['b'] != 1) continue;
+    starts.add(row['vkey'] as int);
+  }
+
+  final update = db.prepare('UPDATE verses SET segments = ? WHERE id = ?');
+  var moved = 0;
+  db.execute('BEGIN');
+  for (final row in db.select("""
+      SELECT id, vkey, segments FROM verses WHERE translation_id <> 'web'
+    """)) {
+    if (!starts.contains(row['vkey'] as int)) continue;
+    final segs = jsonDecode(row['segments'] as String) as List;
+    if (segs.isEmpty) continue;
+    final first = segs.first as Map<String, dynamic>;
+    if (first['b'] == 1) continue; // разрыв уже есть — в поэзии он свой
+    first['b'] = 1;
+    update.execute([jsonEncode(segs), row['id']]);
+    moved++;
+  }
+  db.execute('COMMIT');
+  update.dispose();
+  stdout.writeln('абзацев перенесено из WEB: $moved');
 }
 
 /// Переносит слова Христа на переводы, где своей разметки нет.

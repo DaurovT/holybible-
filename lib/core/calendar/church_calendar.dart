@@ -387,7 +387,9 @@ DateTime orthodoxEaster(int year) {
   final month = (d + e + 114) ~/ 31;
   final day = ((d + e + 114) % 31) + 1;
   // Дата получилась юлианская — переносим в григорианский календарь.
-  return DateTime(year, month, day).add(const Duration(days: 13));
+  // Дни прибавляются к числу, а не длительностью: сутки перехода на летнее
+  // время короче 24 часов, и Duration сдвинула бы дату на день назад.
+  return DateTime(year, month, day + 13);
 }
 
 DateTime easterFor(int year, ChurchTradition tradition) =>
@@ -406,7 +408,9 @@ List<Feast> feastsOn(DateTime date, ChurchTradition tradition) {
   for (final rule in _rules) {
     if (!rule.traditions.contains(tradition)) continue;
     if (rule.fromEaster != null) {
-      if (_dayOnly(easter.add(Duration(days: rule.fromEaster!))) == day) {
+      final date =
+          DateTime(easter.year, easter.month, easter.day + rule.fromEaster!);
+      if (date == day) {
         out.add(rule.feast);
       }
     } else if (rule.month == day.month && rule.day == day.day) {
@@ -421,7 +425,7 @@ List<Feast> feastsOn(DateTime date, ChurchTradition tradition) {
     DateTime from, ChurchTradition tradition) {
   final start = _dayOnly(from);
   for (var i = 1; i <= 400; i++) {
-    final day = start.add(Duration(days: i));
+    final day = DateTime(start.year, start.month, start.day + i);
     final found = feastsOn(day, tradition);
     if (found.isNotEmpty) return (feast: found.first, date: day);
   }

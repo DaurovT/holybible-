@@ -108,6 +108,23 @@ class _SettingsSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 22),
 
+            SectionTitle('Движение по тексту'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final l in ReaderLayout.values)
+                  AppChip(
+                    label: l.title,
+                    selected: s.layout == l,
+                    onTap: () => n.update(s.copyWith(layout: l)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(s.layout.hint, style: AppText.caption(c)),
+            const SizedBox(height: 22),
+
             SectionTitle('Оформление'),
             const SizedBox(height: 8),
             Wrap(

@@ -17,6 +17,7 @@ import '../../data/entity_repository.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../state/user_data.dart';
+import '../ai/ai_service.dart';
 import '../ai/explain_sheet.dart';
 import '../entity/entity_sheet.dart';
 import '../library/note_sheet.dart';
@@ -60,6 +61,10 @@ class PassageActionsBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = ref.watch(settingsProvider).colors;
+    // Без адреса сервера разбор не работает вовсе. Кнопка, которая всегда
+    // отвечает «недоступно», — это ровно то, за что App Store отклоняет
+    // сборку по правилу 2.1, поэтому в такой сборке кнопок ИИ нет.
+    final ai = ref.watch(aiServiceProvider).isConfigured;
 
     return Container(
       decoration: BoxDecoration(
@@ -106,28 +111,31 @@ class PassageActionsBar extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
               child: Row(
                 children: [
-                  _Action(
-                    icon: Icons.auto_awesome_rounded,
-                    label: 'Объяснить',
-                    primary: true,
-                    onTap: () => _explain(context, ExplainMode.explain),
-                  ),
+                  if (ai)
+                    _Action(
+                      icon: Icons.auto_awesome_rounded,
+                      label: 'Объяснить',
+                      primary: true,
+                      onTap: () => _explain(context, ExplainMode.explain),
+                    ),
                   _Action(
                     icon: Icons.hub_outlined,
                     label: 'Параллельные места',
                     onTap: () => showCrossRefsSheet(context,
                         verses: verses, reference: reference),
                   ),
-                  _Action(
-                    icon: Icons.history_edu_rounded,
-                    label: 'Контекст',
-                    onTap: () => _explain(context, ExplainMode.context),
-                  ),
-                  _Action(
-                    icon: Icons.lightbulb_outline_rounded,
-                    label: 'Почему это важно',
-                    onTap: () => _explain(context, ExplainMode.whyMatters),
-                  ),
+                  if (ai)
+                    _Action(
+                      icon: Icons.history_edu_rounded,
+                      label: 'Контекст',
+                      onTap: () => _explain(context, ExplainMode.context),
+                    ),
+                  if (ai)
+                    _Action(
+                      icon: Icons.lightbulb_outline_rounded,
+                      label: 'Почему это важно',
+                      onTap: () => _explain(context, ExplainMode.whyMatters),
+                    ),
                   _Action(
                     icon: Icons.translate_rounded,
                     label: 'Слова оригинала',
@@ -139,11 +147,12 @@ class PassageActionsBar extends ConsumerWidget {
                     label: 'Сравнить переводы',
                     onTap: () => _compare(context, ref),
                   ),
-                  _Action(
-                    icon: Icons.help_outline_rounded,
-                    label: 'Задать вопрос',
-                    onTap: () => _explain(context, ExplainMode.ask),
-                  ),
+                  if (ai)
+                    _Action(
+                      icon: Icons.help_outline_rounded,
+                      label: 'Задать вопрос',
+                      onTap: () => _explain(context, ExplainMode.ask),
+                    ),
                   _Action(
                     icon: Icons.copy_rounded,
                     label: 'Копировать',
@@ -410,8 +419,8 @@ Future<List<BibleEntity>> entitiesInVerses(
       for (final m in v.mentions)
         if (m.confidence >= 0.2) m.entityId
   };
-  final list = db.entities(ids.toList());
-  list.sort((a, b) => b.refCount.compareTo(a.refCount));
+  final list = [...db.entities(ids.toList())]
+    ..sort((a, b) => b.refCount.compareTo(a.refCount));
   return list;
 }
 
