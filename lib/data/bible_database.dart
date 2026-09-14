@@ -40,7 +40,7 @@ Future<void> unpackAsset(String asset, File target) async {
 /// Меняется при пересборке assets/db/bible.db. Несовпадение версии
 /// перезаписывает копию — иначе после обновления приложения пользователь
 /// останется со старым текстом.
-const bibleDbVersion = 10;
+const bibleDbVersion = 11;
 
 class BibleDatabase {
   BibleDatabase._(this._db);

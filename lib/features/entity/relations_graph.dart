@@ -41,12 +41,14 @@ class RelationsGraph extends ConsumerWidget {
     // Один и тот же человек попадает в связи дважды — из прямой записи и из
     // обратной. Плюс в первоисточнике встречаются тёзки с одинаковым именем и
     // записи без имени вовсе. В списке имён два одинаковых чипа неразличимы,
-    // поэтому оставляем по одному на имя, а безымянные пропускаем.
+    // поэтому оставляем по одному на имя, а безымянные пропускаем. Пропускаем
+    // и тех, у кого нет русского имени: английское «Nahash» среди русских
+    // чипов у Давида читалось как поломка — так же, как в списках «Исследовать».
     final byRel = <String, List<EntityRelation>>{};
     final seen = <String>{};
     for (final r in relations) {
       final name = (r.otherName ?? '').trim();
-      if (name.isEmpty || !RegExp('[A-Za-zА-Яа-яЁё]').hasMatch(name)) continue;
+      if (name.isEmpty || !RegExp('[А-Яа-яЁё]').hasMatch(name)) continue;
       if (!seen.add('${r.rel}:${name.toLowerCase()}')) continue;
       (byRel[r.rel] ??= []).add(r);
     }

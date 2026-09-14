@@ -74,6 +74,10 @@ String _collapseRefs(String text) {
 }
 
 /// Снимает вики-разметку, оставляя читаемый текст.
+final _serviceLink = RegExp(
+    r'^\s*(Категория|Category|Файл|File|Изображение|Image)\s*:',
+    caseSensitive: false);
+
 String cleanWikitext(String src) {
   final out = StringBuffer();
   var i = 0;
@@ -107,6 +111,13 @@ String cleanWikitext(String src) {
       final end = src.indexOf(']]', i);
       if (end > 0) {
         final inner = src.substring(i + 2, end);
+        // Служебные метки Викитеки — не текст. Без подписи их разбор ниже
+        // выводил как есть, и в конце 4574 статей из 4581 стояло
+        // «Категория:БЭАН:Статьи без категорий».
+        if (_serviceLink.hasMatch(inner)) {
+          i = end + 2;
+          continue;
+        }
         final pipe = inner.lastIndexOf('|');
         out.write(pipe < 0 ? inner : inner.substring(pipe + 1));
         i = end + 2;

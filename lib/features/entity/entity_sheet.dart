@@ -114,10 +114,10 @@ class _EntitySheet extends ConsumerWidget {
                     _Stat(
                         label: 'упоминаний',
                         value: '${e.refCount}'),
-                  if (e.modernName != null)
-                    _Stat(label: 'сегодня', value: e.modernName!),
-                  if (e.tribe != null)
-                    _Stat(label: 'колено', value: _tribeRu(e.tribe!)),
+                  // Современного названия здесь нет намеренно: в OpenBible это
+                  // английские имена раскопок («Tell Harube»), а русских
+                  // соответствий у них нет.
+                  ?(e.tribe == null ? null : _originStat(e.tribe!)),
                 ],
               ),
               const SizedBox(height: 18),
@@ -151,8 +151,62 @@ class _EntitySheet extends ConsumerWidget {
   }
 }
 
-String _tribeRu(String s) =>
-    s.replaceFirst('Tribe of ', '').trim();
+/// Происхождение человека из TIPNR: колено Израилево, народ или «праотец».
+///
+/// Значения там английские, а раньше выводились как есть — под подписью
+/// «колено» у Авраама стояло «Early Patriarch». Всё, чего нет в словаре ниже,
+/// не показываем вовсе: английское слово в русской карточке читается как
+/// поломка. Неуверенные записи («Tribe of Judah(?)») тоже пропускаем, чтобы не
+/// выдавать догадку первоисточника за факт.
+_Stat? _originStat(String raw) {
+  final s = raw.replaceFirst('>', '').trim();
+  if (s.contains('?')) return null;
+  if (s == 'Early Patriarch') return const _Stat(label: 'эпоха', value: 'праотцы');
+  final tribe = RegExp(r'^Tribe of (\w+)').firstMatch(s);
+  if (tribe != null) {
+    final name = _tribes[tribe.group(1)];
+    return name == null ? null : _Stat(label: 'колено', value: name);
+  }
+  final land = _lands[s];
+  return land == null ? null : _Stat(label: 'откуда', value: land);
+}
+
+const _tribes = {
+  'Judah': 'Иудино',
+  'Levi': 'Левиино',
+  'Benjamin': 'Вениаминово',
+  'Simeon': 'Симеоново',
+  'Asher': 'Асирово',
+  'Manasseh': 'Манассиино',
+  'Gad': 'Гадово',
+  'Reuben': 'Рувимово',
+  'Ephraim': 'Ефремово',
+  'Issachar': 'Иссахарово',
+  'Naphtali': 'Неффалимово',
+  'Zebulun': 'Завулоново',
+  'Dan': 'Даново',
+};
+
+const _lands = {
+  'Edom': 'Едом',
+  'Israel': 'Израиль',
+  'Canaan': 'Ханаан',
+  'Egypt': 'Египет',
+  'Ammon': 'Аммон',
+  'Sinai': 'Синай',
+  'Arabia': 'Аравия',
+  'Syria': 'Сирия',
+  'Moab': 'Моав',
+  'Mesopotamia': 'Месопотамия',
+  'Persia': 'Персия',
+  'Persian': 'Персия',
+  'Assyria': 'Ассирия',
+  'Midian': 'Мадиам',
+  'Italy': 'Италия',
+  'Philistia': 'Филистия',
+  'Judea': 'Иудея',
+  'Cush': 'Хуш',
+};
 
 class _KindBadge extends ConsumerWidget {
   const _KindBadge({required this.kind});

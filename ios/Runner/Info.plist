@@ -11,7 +11,7 @@
 		<string>ru</string>
 	</array>
 	<key>CFBundleDisplayName</key>
-	<string>Holy Bible</string>
+	<string>Библия</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

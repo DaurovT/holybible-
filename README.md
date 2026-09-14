@@ -177,7 +177,9 @@ test/        39 тестов: user.db, разбор ссылок, USFM, кале
    заверения покрыт [server/test_attest.py](server/test_attest.py) на
    самодельных ключах. После проверки закрыть запасной путь:
    `ALLOW_APP_TOKEN=0`.
-4. **App Store Connect.** Анкета App Privacy — ровно по
+4. **App Store Connect.** Тексты, анкеты и заметки для ревьюера — в
+   [docs/app-store.md](docs/app-store.md), скриншоты — в `docs/screenshots/`.
+   Анкета App Privacy — ровно по
    [ios/Runner/PrivacyInfo.xcprivacy](ios/Runner/PrivacyInfo.xcprivacy);
    ссылка на политику — `https://holybible-api.eastus.cloudapp.azure.com/privacy`,
    Support URL — `https://holybible-api.eastus.cloudapp.azure.com/support`;

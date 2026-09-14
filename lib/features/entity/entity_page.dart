@@ -328,12 +328,13 @@ class _PlaceCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (entity.modernName != null)
-            _Row(label: 'Современное название', value: entity.modernName!),
-          if (entity.placeType != null)
-            _Row(label: 'Тип', value: _typeRu(entity.placeType!)),
-          if (entity.geoArea != null)
-            _Row(label: 'Область', value: _areaRu(entity.geoArea!)),
+          // «Современное название» из OpenBible не выводим: у всех 1067 мест
+          // это английские имена раскопок вроде «Tell Harube», и в русской
+          // карточке строка читалась как поломка.
+          if (entity.placeType case final t? when _typeRu(t) != null)
+            _Row(label: 'Тип', value: _typeRu(t)!),
+          if (entity.geoArea case final a? when _areaRu(a) != null)
+            _Row(label: 'Область', value: _areaRu(a)!),
           _Row(
             label: 'Координаты',
             value: '${entity.lat!.toStringAsFixed(4)}, '
@@ -349,7 +350,9 @@ class _PlaceCard extends ConsumerWidget {
   }
 
   /// Тип места из OpenBible — там их три десятка, и все по-английски.
-  static String _typeRu(String t) => switch (t) {
+  /// Незнакомый тип не показываем: английское слово в русской карточке
+  /// читается как поломка.
+  static String? _typeRu(String t) => switch (t) {
         'settlement' => 'поселение',
         'river' => 'река',
         'mountain' => 'гора',
@@ -379,16 +382,21 @@ class _PlaceCard extends ConsumerWidget {
         'tree' => 'дерево',
         'hall' => 'зал',
         'room' => 'комната',
-        _ => t,
+        'promontory' => 'мыс',
+        'fortification' => 'укрепление',
+        'wadi' => 'вади — пересыхающее русло',
+        'altar' => 'жертвенник',
+        'special' => 'особое место',
+        _ => null,
       };
 
   /// Историческая область: у OpenBible это либо страна, либо надел колена.
-  static String _areaRu(String a) {
+  static String? _areaRu(String a) {
     final tribe = RegExp(r'^Tribe of (\w+)').firstMatch(a);
     if (tribe != null) {
       return 'надел колена ${_tribes[tribe.group(1)] ?? tribe.group(1)}';
     }
-    return _areas[a.replaceAll('(?)', '').trim()] ?? a;
+    return _areas[a.replaceAll('(?)', '').trim()];
   }
 
   static const _tribes = {

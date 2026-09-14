@@ -127,6 +127,12 @@ Android, офлайн-first. Текст — главное, всё осталь�
   `ios/Runner/PrivacyInfo.xcprivacy`, `server/privacy.html` (отдаётся как
   `/privacy`) и анкета App Privacy в App Store Connect. Поменял одно — поправь
   остальные.
+- В App Store приложение называется «Библия с AI разбором», под иконкой —
+  «Библия». Всё, что вводится в App Store Connect (описание, ключевые слова,
+  анкеты, заметки для ревьюера), — в [docs/app-store.md](docs/app-store.md).
+- Скриншоты снимает `integration_test/screenshots_test.dart` на симуляторе
+  iPhone 17 Pro Max, команда — в шапке файла. Поменял экран, попавший в кадр, —
+  пересними. Кадра с ответом ИИ там нет: на симуляторе нет App Attest.
 
 ## Иконка
 
