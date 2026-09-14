@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фон светлой палитры чтения (ReadingColors.light в reading_theme.dart). -->
+    <color name="launch_background">#FCFCFA</color>
+</resources>

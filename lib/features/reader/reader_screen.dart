@@ -83,6 +83,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _anchorReady = true;
     _visibleBook = index[_anchor].$1;
     _visibleChapter = index[_anchor].$2;
+    // Опору считают уже внутри build, после того как шапка нарисована, и
+    // перерисовки за этим не следует: на старте в шапке висело «Выбрать книгу»
+    // над открытой главой, пока человек не коснётся экрана.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   /// Определяет главу под верхней кромкой экрана и обновляет заголовок.
@@ -216,7 +222,15 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       return b == null ? '${p.bookId} ${p.chapter}' : '${bookLabel(b)} ${p.chapter}';
     }
 
-    return Scaffold(
+    // Системная «назад» на Android сначала снимает выделение стиха и только
+    // потом закрывает приложение — иначе палец, привыкший так закрывать панель,
+    // выбрасывает из чтения.
+    return PopScope(
+      canPop: _selected.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(_selected.clear);
+      },
+      child: Scaffold(
       backgroundColor: c.background,
       appBar: AppBar(
         leadingWidth: 46,
@@ -322,6 +336,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           );
         },
       ),
+    ),
     );
   }
 

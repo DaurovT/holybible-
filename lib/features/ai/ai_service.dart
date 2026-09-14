@@ -92,7 +92,11 @@ class AiService {
   final http.Client _client;
   final DeviceAttest _attest;
 
-  bool get isConfigured => aiEndpoint.isNotEmpty;
+  /// Разбор есть там, где задан сервер и где устройство может доказать
+  /// подлинность приложения. Сервер проверяет это через App Attest, а он есть
+  /// только у Apple; на Android без Play Integrity каждый запрос получал бы
+  /// отказ, поэтому там кнопок разбора нет вовсе.
+  bool get isConfigured => aiEndpoint.isNotEmpty && Platform.isIOS;
 
   Future<AiAnswer> explain(AiRequest request) async {
     if (!isConfigured) {

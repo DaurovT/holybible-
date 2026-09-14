@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter объявляет INTERNET только в отладочном и профильном манифестах.
+         Без этой строки релиз не выходит в сеть вовсе. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="holy_bible"
+        android:label="Библия"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -17,6 +17,8 @@
 /// App Attest, — поэтому кадра с ответом ИИ здесь нет, его снимают на телефоне.
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,14 +52,26 @@ void main() {
     final container =
         ProviderScope.containerOf(tester.element(find.byType(BibleApp)));
 
+    // На Android снимок берётся только с поверхности-изображения, её включают
+    // один раз заранее. Кадры Android кладутся отдельно: для Google Play свои
+    // размеры, и затирать ими скриншоты App Store нельзя.
+    if (Platform.isAndroid) {
+      await binding.convertFlutterSurfaceToImage();
+      await _settle(tester);
+    }
+    final prefix = Platform.isAndroid ? 'android/' : '';
+
     Future<void> shot(String name) async {
       await _settle(tester);
-      await binding.takeScreenshot(name);
+      await binding.takeScreenshot('$prefix$name');
     }
 
     // 1. Отрывок выделен — на панели кнопки разбора.
     await _tapWord(tester, 'нищие');
-    await _waitFor(tester, find.text('Объяснить'));
+    // На Android разбора нет (App Attest только у Apple) — ждём панель по
+    // соседней кнопке.
+    await _waitFor(
+        tester, find.text(Platform.isIOS ? 'Объяснить' : 'Параллельные места'));
     await shot('01-razbor');
 
     // 2. Слова оригинала к тому же стиху.
