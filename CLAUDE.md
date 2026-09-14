@@ -160,9 +160,16 @@ Android, офлайн-first. Текст — главное, всё осталь�
   его можно перевыпустить через поддержку, — но храни копию в менеджере
   паролей. Без `key.properties` релиз подписывается отладочным ключом и
   Google Play его не примет; сборка об этом предупреждает.
-- Разбор с ИИ на Android скрыт: подлинность приложения сервер проверяет через
-  App Attest, а он есть только у Apple. Для Android нужен Play Integrity —
-  и в приложении, и на сервере.
+- Разбор с ИИ на Android пускает Play Integrity — аналог App Attest:
+  `PlayIntegrityBridge.kt` → `/attest/android` → `server/play_integrity.py`.
+  Сборке нужен `--dart-define=PLAY_CLOUD_PROJECT=…` (номер проекта Google
+  Cloud из Play Console → App integrity); без него кнопки разбора на Android
+  скрыты. Серверу — `PLAY_INTEGRITY_CREDENTIALS` (ключ сервисного аккаунта),
+  `ANDROID_CERT_SHA256` (отпечаток ключа **Play App Signing**, а не ключа
+  загрузки: Google Play переподписывает сборку своим) и `PLAY_INTEGRITY_ENV`.
+  Вердикт `PLAY_RECOGNIZED` бывает только у приложения, установленного из
+  Google Play, — сборку через adb в бою сервер не пустит, для неё
+  `PLAY_INTEGRITY_ENV=development`.
 - Разрешение `INTERNET` Flutter кладёт только в отладочный и профильный
   манифесты. В основном оно объявлено явно — без него релиз не выходит в сеть.
 - Нативные библиотеки должны быть выровнены под страницы 16 КБ (требование

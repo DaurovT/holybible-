@@ -68,3 +68,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Play Integrity — Android-аналог App Attest: сервер пускает к разбору с ИИ
+    // только подлинное приложение (PlayIntegrityBridge.kt).
+    implementation("com.google.android.play:integrity:1.6.0")
+}

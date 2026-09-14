@@ -28,6 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from attest import AppAttest, AttestError
+from play_integrity import IntegrityError, PlayIntegrity
 from sources import Source, SourceIndex
 from store import Store
 
@@ -52,6 +53,14 @@ TOKEN_TTL = int(os.environ.get('TOKEN_TTL', '86400'))
 # где App Attest недоступен.
 APP_TOKEN = os.environ.get('APP_TOKEN', '')
 ALLOW_APP_TOKEN = os.environ.get('ALLOW_APP_TOKEN', '0') == '1'
+
+# Play Integrity — то же для Android (см. play_integrity.py). Пакет и отпечаток
+# ключа подписи Play App Signing не секреты; ключ сервисного аккаунта Google
+# Cloud — секрет и лежит только на сервере.
+ANDROID_PACKAGE = os.environ.get('ANDROID_PACKAGE', 'com.holybible.holy_bible')
+ANDROID_CERT_SHA256 = os.environ.get('ANDROID_CERT_SHA256', '')
+PLAY_INTEGRITY_ENV = os.environ.get('PLAY_INTEGRITY_ENV', 'production')
+PLAY_INTEGRITY_CREDENTIALS = os.environ.get('PLAY_INTEGRITY_CREDENTIALS', '')
 
 # Квоты считаются по устройству, а не по адресу: телефоны за общим оператором
 # делят один адрес и мешали бы друг другу.
@@ -112,6 +121,14 @@ class AssertRequest(BaseModel):
     challenge: str
 
 
+class AndroidAttestRequest(BaseModel):
+    # Случайный идентификатор установки: по нему считаются квоты — так же, как
+    # на iPhone по ключу App Attest.
+    installId: str = Field(pattern=r'^[A-Za-z0-9_-]{16,64}$')
+    challenge: str
+    token: str = Field(max_length=16000)
+
+
 app = FastAPI(title='HolyBible AI backend')
 index = SourceIndex(DB_PATH)
 store = Store(STATE_PATH)
@@ -122,6 +139,15 @@ ATTEST_READY = bool(TEAM_ID and BUNDLE_ID and JWT_SECRET)
 if not ATTEST_READY:
     log.warning('App Attest выключен: не заданы APPLE_TEAM_ID, '
                 'APPLE_BUNDLE_ID или JWT_SECRET')
+
+integrity = PlayIntegrity(ANDROID_PACKAGE, ANDROID_CERT_SHA256.split(','),
+                          PLAY_INTEGRITY_ENV, PLAY_INTEGRITY_CREDENTIALS)
+ANDROID_READY = bool(integrity.ready and JWT_SECRET)
+if not ANDROID_READY:
+    log.warning('Play Integrity выключен: не задан PLAY_INTEGRITY_CREDENTIALS '
+                'или JWT_SECRET')
+elif PLAY_INTEGRITY_ENV == 'production' and not ANDROID_CERT_SHA256:
+    log.warning('ANDROID_CERT_SHA256 не задан: подпись приложения не сверяется')
 
 
 @app.get('/health')
@@ -136,6 +162,9 @@ async def health() -> dict[str, object]:
         'teamId': TEAM_ID,
         'bundleId': BUNDLE_ID,
         'attestEnv': ATTEST_ENV,
+        'playIntegrity': ANDROID_READY,
+        'playIntegrityEnv': PLAY_INTEGRITY_ENV,
+        'androidPackage': ANDROID_PACKAGE,
         **store.stats(),
     }
 
@@ -230,6 +259,50 @@ async def assert_key(req: AssertRequest) -> JSONResponse:
         return JSONResponse({'error': 'Подпись не разобрана'}, status_code=400)
     store.bump_counter(req.keyId, counter)
     return JSONResponse(_issue(req.keyId))
+
+
+@app.post('/attest/android')
+async def attest_android(req: AndroidAttestRequest) -> JSONResponse:
+    """Android: вердикт Google Play вместо заверения Apple.
+
+    Вердикт одноразовый и привязан к челленджу, так что пропуск выдаётся на
+    каждый новый вердикт — отдельного «подписать ещё раз», как у App Attest,
+    здесь нет.
+    """
+    if not ANDROID_READY:
+        return JSONResponse({'error': 'Проверка устройств Android не настроена'},
+                            status_code=503)
+    if not store.take_challenge(req.challenge):
+        return JSONResponse({'error': 'Челлендж просрочен'}, status_code=400)
+    key_id = f'android:{req.installId}'
+    known = store.device(key_id)
+    if known and known[2]:
+        return JSONResponse({'error': 'Устройство заблокировано'},
+                            status_code=403)
+    try:
+        payload = await integrity.decode(client, req.token)
+        integrity.check(payload, req.challenge)
+    except IntegrityError as e:
+        log.warning('вердикт Play Integrity отклонён: %s', e)
+        return JSONResponse({'error': 'Устройство не подтверждено',
+                             'detail': str(e)}, status_code=401)
+    except httpx.HTTPStatusError as e:
+        log.warning('Play Integrity ответил %s: %s', e.response.status_code,
+                    e.response.text[:300])
+        return JSONResponse(
+            {'error': 'Google не проверил устройство',
+             'detail': f'Play Integrity ответил {e.response.status_code}'},
+            status_code=502)
+    except httpx.HTTPError as e:
+        log.warning('Play Integrity недоступен: %s', e)
+        return JSONResponse({'error': 'Google не проверил устройство',
+                             'detail': 'Play Integrity недоступен'},
+                            status_code=502)
+    if known:
+        store.bump_counter(key_id, 0)
+    else:
+        store.add_device(key_id, b'', 0)
+    return JSONResponse(_issue(key_id))
 
 
 def _caller(request: Request) -> tuple[str, JSONResponse | None]:

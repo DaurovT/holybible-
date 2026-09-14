@@ -51,9 +51,36 @@ App Store поставить 0.**
     AZURE_AI_ENDPOINT=  AZURE_AI_KEY=  AZURE_AI_MODEL=
     APPLE_TEAM_ID=  APPLE_BUNDLE_ID=  ATTEST_ENV=  JWT_SECRET=
     APP_TOKEN=  ALLOW_APP_TOKEN=
+    PLAY_INTEGRITY_CREDENTIALS=  ANDROID_CERT_SHA256=  PLAY_INTEGRITY_ENV=
+    ANDROID_PACKAGE=
 
 `ATTEST_ENV=development` принимает и отладочные сборки, и боевые;
 `production` — только боевые. Для App Store ставится `production`.
+
+## Android: Play Integrity
+
+Android-аналог App Attest (`play_integrity.py`, маршрут `/attest/android`).
+Приложение присылает вердикт Google Play, сервер отдаёт его на расшифровку в
+Play Integrity API от имени сервисного аккаунта Google Cloud и проверяет:
+пакет, челлендж, свежесть, признание Google Play, подпись и честность
+устройства. Проверки — `.venv/bin/python test_play_integrity.py`.
+
+Один раз настроить:
+
+1. Play Console → приложение `com.holybible.holy_bible` → **App integrity** →
+   Play Integrity API → привязать проект Google Cloud (или создать). Номер
+   проекта нужен приложению при сборке: `PLAY_CLOUD_PROJECT`.
+2. Google Cloud → этот проект → IAM → **сервисный аккаунт** без ролей → ключ
+   JSON. Положить на сервер, например `~/.play-integrity.json` с правами 600,
+   путь — в `PLAY_INTEGRITY_CREDENTIALS`.
+3. Play Console → App integrity → **App signing key certificate** → SHA-256 в
+   `ANDROID_CERT_SHA256` как есть, с двоеточиями. Именно ключ Play App Signing:
+   Google Play переподписывает сборку им, ключ загрузки в вердикт не попадает.
+4. `PLAY_INTEGRITY_ENV=development`, пока проверяете сборку через adb или на
+   эмуляторе: пропускает приложение не из Google Play и базовую целостность
+   устройства. Для публикации — `production`.
+
+`/health` показывает `playIntegrity: true`, когда ключ прочитан.
 
 ## Развернуть с нуля
 

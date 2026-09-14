@@ -19,13 +19,19 @@ if [[ ! -f android/key.properties ]]; then
 fi
 
 ENDPOINT="${AI_ENDPOINT:-https://holybible-api.eastus.cloudapp.azure.com}"
+# Номер проекта Google Cloud, привязанного к приложению в Play Console
+# (App integrity → Play Integrity API). Без него разбор с ИИ на Android скрыт.
+PLAY="${PLAY_CLOUD_PROJECT:-}"
+if [[ -z "$PLAY" ]]; then
+  echo "PLAY_CLOUD_PROJECT не задан — разбор с ИИ на Android будет скрыт." >&2
+fi
 BT="$(ls -d "$HOME"/Library/Android/sdk/build-tools/* | sort -V | tail -1)"
 
 rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-flutter build appbundle --release --dart-define=AI_ENDPOINT="$ENDPOINT"
+flutter build appbundle --release --dart-define=AI_ENDPOINT="$ENDPOINT" --dart-define=PLAY_CLOUD_PROJECT="$PLAY"
 
 rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-flutter build apk --release --dart-define=AI_ENDPOINT="$ENDPOINT"
+flutter build apk --release --dart-define=AI_ENDPOINT="$ENDPOINT" --dart-define=PLAY_CLOUD_PROJECT="$PLAY"
 
 APK=build/app/outputs/flutter-apk/app-release.apk
 AAB=build/app/outputs/bundle/release/app-release.aab
