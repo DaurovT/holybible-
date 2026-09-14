@@ -58,9 +58,36 @@ App Store поставить 0.**
 ## Развернуть с нуля
 
     python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-    cp <репозиторий>/assets/db/bible.db data/bible.db
+    gunzip -c <репозиторий>/assets/db/bible.db.gz > data/bible.db
+    for f in main.py sources.py attest.py store.py apple_app_attest_root_ca.pem \
+             privacy.html support.html; do ln -sfn <репозиторий>/server/$f $f; done
     sudo cp deploy/holybible-api.service deploy/holybible-watch.* /etc/systemd/system/
     sudo systemctl enable --now holybible-api holybible-watch.timer
+
+В репозитории база лежит только сжатой, несжатой `bible.db` там нет.
+
+## Обновить после git pull
+
+Исходники — ссылки в репозиторий, так что новый код уже на диске, но
+работающий процесс его не видит. Порядок:
+
+1. **Новые файлы в `server/`** — завести на них ссылки, как выше. Страница без
+   ссылки отдаёт ошибку, а не 404.
+2. **Изменилась `assets/db/bible.db.gz`** — распаковать во временный файл,
+   проверить и только потом подменить: сервер держит базу открытой, а битая
+   база сломает разбор, не запуск.
+
+       gunzip -c <репозиторий>/assets/db/bible.db.gz > data/bible.db.incoming
+       mv data/bible.db data/bible.db.old && mv data/bible.db.incoming data/bible.db
+
+   Если в базе поменялись статьи или тексты, очистить кеш ответов — иначе
+   старые разборы отдаются ещё `CACHE_TTL_DAYS`:
+
+       python3 -c "import sqlite3; c=sqlite3.connect('data/state.db'); c.execute('delete from cache'); c.commit()"
+
+3. **Изменился `deploy/holybible-api.service`** — скопировать в
+   `/etc/systemd/system/` и `sudo systemctl daemon-reload`.
+4. `sudo systemctl restart holybible-api` и проверить `/health`.
 
 Наружу смотрит Caddy, не бэкенд: тот слушает `127.0.0.1:8099` и из интернета
 недоступен. `deploy/Caddyfile` держит 443 и сам выпускает сертификат
