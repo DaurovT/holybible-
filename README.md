@@ -179,7 +179,8 @@ test/        39 тестов: user.db, разбор ссылок, USFM, кале
    `ALLOW_APP_TOKEN=0`.
 4. **App Store Connect.** Анкета App Privacy — ровно по
    [ios/Runner/PrivacyInfo.xcprivacy](ios/Runner/PrivacyInfo.xcprivacy);
-   ссылка на политику — `https://holybible-api.eastus.cloudapp.azure.com/privacy`;
+   ссылка на политику — `https://holybible-api.eastus.cloudapp.azure.com/privacy`,
+   Support URL — `https://holybible-api.eastus.cloudapp.azure.com/support`;
    скриншоты только для iPhone; сборка через TestFlight:
 
        flutter build ipa --release \

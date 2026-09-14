@@ -140,15 +140,21 @@ async def health() -> dict[str, object]:
     }
 
 
-# Политика конфиденциальности. App Store требует ссылку на неё, а своего сайта
-# у приложения нет — отдаём страницу отсюда же, с того адреса, куда и так ходит
-# разбор.
-PRIVACY_HTML = Path(__file__).with_name('privacy.html')
+# Политика конфиденциальности и страница поддержки. App Store Connect требует
+# ссылки на обе, а своего сайта у приложения нет — отдаём их отсюда же, с того
+# адреса, куда и так ходит разбор. Читаются на каждый запрос: правка текста не
+# требует перезапуска.
+PAGES_DIR = Path(__file__).parent
 
 
 @app.get('/privacy', response_class=HTMLResponse)
 async def privacy() -> HTMLResponse:
-    return HTMLResponse(PRIVACY_HTML.read_text(encoding='utf-8'))
+    return HTMLResponse((PAGES_DIR / 'privacy.html').read_text(encoding='utf-8'))
+
+
+@app.get('/support', response_class=HTMLResponse)
+async def support() -> HTMLResponse:
+    return HTMLResponse((PAGES_DIR / 'support.html').read_text(encoding='utf-8'))
 
 
 # --- App Attest ------------------------------------------------------------
