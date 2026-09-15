@@ -21,9 +21,11 @@ import 'device_attest.dart';
 const aiEndpoint = String.fromEnvironment('AI_ENDPOINT');
 
 /// Запасной общий секрет: `--dart-define=AI_TOKEN=…`. Нужен только там, где
-/// App Attest недоступен — в симуляторе. Он один на все копии приложения, из
-/// бандла его достанут, поэтому на сервере путь через него по умолчанию
-/// закрыт. Подлинность сборки доказывает App Attest, см. device_attest.dart.
+/// платформа подлинность не подтвердит: в симуляторе iOS и на Android до
+/// загрузки в Google Play (tool/build_android_test.sh). Он один на все копии
+/// приложения, из сборки его достанут, поэтому на сервере путь через него по
+/// умолчанию закрыт, а в сборки для магазинов секрет не попадает. Подлинность
+/// доказывают App Attest и Play Integrity, см. device_attest.dart.
 const aiToken = String.fromEnvironment('AI_TOKEN');
 
 class AiRequest {
@@ -94,9 +96,12 @@ class AiService {
 
   /// Разбор есть там, где задан сервер и где сборка может доказать
   /// подлинность приложения: на iPhone — App Attest, на Android — Play
-  /// Integrity, если при сборке задан проект Google Cloud. Без этого каждый
-  /// запрос получал бы отказ, и кнопок разбора нет вовсе.
-  bool get isConfigured => aiEndpoint.isNotEmpty && _attest.available;
+  /// Integrity, если при сборке задан проект Google Cloud. До загрузки в
+  /// Google Play вердикта ещё не бывает, и тестовая сборка идёт по общему
+  /// секрету (tool/build_android_test.sh). Без того и другого каждый запрос
+  /// получал бы отказ, и кнопок разбора нет вовсе.
+  bool get isConfigured =>
+      aiEndpoint.isNotEmpty && (_attest.available || aiToken.isNotEmpty);
 
   Future<AiAnswer> explain(AiRequest request) async {
     if (!isConfigured) {
@@ -157,6 +162,12 @@ class AiService {
   /// «слишком много разборов за час» читателю понятнее, чем «429».
   String _reason(http.Response res) {
     final problem = _attest.lastProblem;
+    if (res.statusCode == 401 && problem != null && aiToken.isNotEmpty) {
+      // Тестовая сборка: платформа устройство не подтвердила, а общий секрет
+      // сервер не принял — чаще всего на сервере выключен ALLOW_APP_TOKEN.
+      return 'Сервер не принял тестовый ключ ($problem). Разбор недоступен, '
+          'остальное приложение работает без сети.';
+    }
     if (res.statusCode == 401 && problem != null) {
       return 'Не удалось подтвердить устройство — $problem. Разбор недоступен, '
           'остальное приложение работает без сети.';
