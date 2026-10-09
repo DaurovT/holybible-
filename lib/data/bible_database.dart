@@ -1,41 +1,13 @@
 /// Доступ к вшитой библейской базе.
 ///
-/// SQLite не умеет читать файл прямо из бандла Flutter, поэтому при первом
-/// запуске база копируется в каталог приложения. Дальше всё работает
-/// офлайн и без сети — это принципиально: Библию читают в самолёте, в храме
-/// без связи и в странах с блокировками.
+/// Где она лежит и как открывается — в db_storage.dart: на телефоне это файл,
+/// в браузере IndexedDB. Здесь только запросы.
 library;
 
-import 'dart:io';
+import 'package:sqlite3/common.dart';
 
-import 'package:flutter/services.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart';
-
+import 'db_storage.dart';
 import 'models.dart';
-
-/// Распаковывает сжатую базу из бандла в рабочий файл.
-///
-/// Потоком, а не целиком в память: распакованная база — это десятки мегабайт,
-/// и держать их в памяти ради одной записи на диск незачем.
-///
-/// Распаковка идёт во временный файл, а рабочее имя он получает только в самом
-/// конце. Иначе приложение, закрытое посреди первого запуска, оставит обрезанную
-/// базу под рабочим именем: раз файл есть, распаковка больше не повторится, и
-/// текст не откроется до переустановки. Недописанный `.part` уберёт чистка
-/// старых версий — его имя начинается так же.
-Future<void> unpackAsset(String asset, File target) async {
-  final data = await rootBundle.load(asset);
-  final packed = File('${target.path}.gz');
-  final partial = File('${target.path}.part');
-  await packed.writeAsBytes(
-      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-      flush: true);
-  await packed.openRead().transform(gzip.decoder).pipe(partial.openWrite());
-  await packed.delete();
-  await partial.rename(target.path);
-}
 
 /// Меняется при пересборке assets/db/bible.db. Несовпадение версии
 /// перезаписывает копию — иначе после обновления приложения пользователь
@@ -45,25 +17,14 @@ const bibleDbVersion = 11;
 class BibleDatabase {
   BibleDatabase._(this._db);
 
-  final Database _db;
+  final CommonDatabase _db;
 
-  static Future<BibleDatabase> open() async {
-    final dir = await getApplicationSupportDirectory();
-    final file = File(p.join(dir.path, 'bible_v$bibleDbVersion.db'));
-
-    if (!file.existsSync()) {
-      // Старые версии убираем, чтобы копии не копились на устройстве.
-      for (final f in dir.listSync()) {
-        if (f is File && p.basename(f.path).startsWith('bible_v')) {
-          f.deleteSync();
-        }
-      }
-      await unpackAsset('assets/db/bible.db.gz', file);
-    }
-
-    final db = sqlite3.open(file.path, mode: OpenMode.readOnly);
-    return BibleDatabase._(db);
-  }
+  static Future<BibleDatabase> open() async =>
+      BibleDatabase._(await openBundled(
+        asset: 'assets/db/bible.db.gz',
+        fileName: 'bible_v$bibleDbVersion.db',
+        prefix: 'bible_v',
+      ));
 
   void dispose() => _db.dispose();
 
@@ -257,5 +218,5 @@ class BibleDatabase {
     ];
   }
 
-  Database get raw => _db;
+  CommonDatabase get raw => _db;
 }

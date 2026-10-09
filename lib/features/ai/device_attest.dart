@@ -14,9 +14,9 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,13 +45,19 @@ class DeviceAttest {
     this._endpoint, {
     AttestPlatform? platform,
     String cloudProject = playCloudProject,
-  })  : _platform = platform ??
-            (Platform.isIOS
-                ? AttestPlatform.apple
-                : Platform.isAndroid
-                    ? AttestPlatform.android
-                    : AttestPlatform.none),
+  })  : _platform = platform ?? _platformOf(defaultTargetPlatform),
         _cloudProject = cloudProject;
+
+  /// В браузере подтверждать подлинность нечем: ни App Attest, ни Play
+  /// Integrity там нет, и разбор с ИИ в вебе не показывается.
+  static AttestPlatform _platformOf(TargetPlatform platform) {
+    if (kIsWeb) return AttestPlatform.none;
+    return switch (platform) {
+      TargetPlatform.iOS => AttestPlatform.apple,
+      TargetPlatform.android => AttestPlatform.android,
+      _ => AttestPlatform.none,
+    };
+  }
 
   static const _appleChannel = MethodChannel('holybible/app_attest');
   static const _playChannel = MethodChannel('holybible/play_integrity');
@@ -151,8 +157,6 @@ class DeviceAttest {
     } on MissingPluginException {
       lastProblem = 'в сборке нет моста к $_vendor';
     } on http.ClientException {
-      lastProblem = 'нет связи с сервером';
-    } on SocketException {
       lastProblem = 'нет связи с сервером';
     } on TimeoutException {
       lastProblem = 'сервер не ответил вовремя';

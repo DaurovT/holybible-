@@ -12,9 +12,9 @@ library;
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3/common.dart';
+
+import 'db_storage.dart';
 
 import '../core/theme/reading_theme.dart';
 
@@ -132,18 +132,17 @@ CREATE INDEX IF NOT EXISTS notes_vkey ON notes(vkey);
 class UserDatabase {
   UserDatabase._(this._db);
 
-  final Database _db;
+  final CommonDatabase _db;
   static final _random = Random.secure();
 
-  static Future<UserDatabase> open() async {
-    final dir = await getApplicationSupportDirectory();
-    return openAt(p.join(dir.path, 'user.db'));
-  }
+  static Future<UserDatabase> open() async =>
+      _ready(await openUserDatabase());
 
-  /// Открытие по явному пути. Нужно тестам: path_provider вне приложения не
-  /// работает, а логика закладок и заметок проверяема сама по себе.
-  static UserDatabase openAt(String path) {
-    final db = sqlite3.open(path);
+  /// Открытие по явному пути. Нужно тестам: каталога приложения вне
+  /// приложения нет, а логика закладок и заметок проверяема сама по себе.
+  static UserDatabase openAt(String path) => _ready(openUserDatabaseAt(path));
+
+  static UserDatabase _ready(CommonDatabase db) {
     db.execute(userDbSchema);
     return UserDatabase._(db);
   }

@@ -89,6 +89,14 @@ flutter build ios --release \
 — CC BY-SA; энциклопедия Никифора — public domain, получена через API Викитеки;
 Natural Earth — public domain. Парсинг чужих сайтов запрещён правилами проекта.
 
+## Веб-версия
+
+    flutter build web --release
+    python3 -m http.server 8787 -d build/web   # и открыть localhost:8787
+
+Первый заход скачивает базу (19 МБ) и кладёт её в IndexedDB — дальше браузер
+открывает приложение офлайн. Слов оригинала и разбора с ИИ в вебе нет.
+
 ## Как запустить
 
 ```bash

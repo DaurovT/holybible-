@@ -18,20 +18,25 @@ if [[ ! -f android/key.properties ]]; then
   exit 1
 fi
 
-ENDPOINT="${AI_ENDPOINT:-https://holybible-api.eastus.cloudapp.azure.com}"
-# Номер проекта Google Cloud, привязанного к приложению в Play Console
-# (App integrity → Play Integrity API). Без него разбор с ИИ на Android скрыт.
-PLAY="${PLAY_CLOUD_PROJECT:-}"
-if [[ -z "$PLAY" ]]; then
-  echo "PLAY_CLOUD_PROJECT не задан — разбор с ИИ на Android будет скрыт." >&2
+# Разбор с ИИ по умолчанию выключен: кнопок нет, пока не задан адрес сервера.
+# Включить — AI_ENDPOINT=… (и PLAY_CLOUD_PROJECT=… для проверки устройства).
+DEFINES=()
+if [[ -n "${AI_ENDPOINT:-}" ]]; then
+  DEFINES+=(--dart-define=AI_ENDPOINT="$AI_ENDPOINT")
+  DEFINES+=(--dart-define=PLAY_CLOUD_PROJECT="${PLAY_CLOUD_PROJECT:-}")
+  if [[ -z "${PLAY_CLOUD_PROJECT:-}" ]]; then
+    echo "PLAY_CLOUD_PROJECT не задан — разбор с ИИ на Android будет скрыт." >&2
+  fi
+else
+  echo "AI_ENDPOINT не задан — сборка без разбора с ИИ." >&2
 fi
 BT="$(ls -d "$HOME"/Library/Android/sdk/build-tools/* | sort -V | tail -1)"
 
 rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-flutter build appbundle --release --dart-define=AI_ENDPOINT="$ENDPOINT" --dart-define=PLAY_CLOUD_PROJECT="$PLAY"
+flutter build appbundle --release "${DEFINES[@]}"
 
 rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-flutter build apk --release --dart-define=AI_ENDPOINT="$ENDPOINT" --dart-define=PLAY_CLOUD_PROJECT="$PLAY"
+flutter build apk --release "${DEFINES[@]}"
 
 APK=build/app/outputs/flutter-apk/app-release.apk
 AAB=build/app/outputs/bundle/release/app-release.aab

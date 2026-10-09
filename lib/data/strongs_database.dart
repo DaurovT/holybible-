@@ -9,13 +9,9 @@
 /// через параллельный английский стих — и в интерфейсе это сказано прямо.
 library;
 
-import 'dart:io';
+import 'package:sqlite3/common.dart';
 
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart';
-
-import 'bible_database.dart' show unpackAsset;
+import 'db_storage.dart';
 
 /// Поднимать при пересборке assets/db/strongs.db.
 const strongsDbVersion = 2;
@@ -50,23 +46,14 @@ class StrongWord {
 class StrongsDatabase {
   StrongsDatabase._(this._db);
 
-  final Database _db;
+  final CommonDatabase _db;
 
-  static Future<StrongsDatabase> open() async {
-    final dir = await getApplicationSupportDirectory();
-    final file = File(p.join(dir.path, 'strongs_v$strongsDbVersion.db'));
-
-    if (!file.existsSync()) {
-      for (final f in dir.listSync()) {
-        if (f is File && p.basename(f.path).startsWith('strongs_v')) {
-          f.deleteSync();
-        }
-      }
-      await unpackAsset('assets/db/strongs.db.gz', file);
-    }
-
-    return StrongsDatabase._(sqlite3.open(file.path, mode: OpenMode.readOnly));
-  }
+  static Future<StrongsDatabase> open() async =>
+      StrongsDatabase._(await openBundled(
+        asset: 'assets/db/strongs.db.gz',
+        fileName: 'strongs_v$strongsDbVersion.db',
+        prefix: 'strongs_v',
+      ));
 
   void dispose() => _db.dispose();
 

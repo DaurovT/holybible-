@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/text/bible_reference.dart';
 import '../../core/theme/design.dart';
 import '../../core/theme/reading_theme.dart';
+import '../../data/db_storage.dart';
 import '../../data/entity_repository.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
@@ -136,12 +137,14 @@ class PassageActionsBar extends ConsumerWidget {
                       label: 'Почему это важно',
                       onTap: () => _explain(context, ExplainMode.whyMatters),
                     ),
-                  _Action(
-                    icon: Icons.translate_rounded,
-                    label: 'Слова оригинала',
-                    onTap: () => showOriginalWordsSheet(context,
-                        verses: verses, reference: reference),
-                  ),
+                  // Слова оригинала — это ещё 25 МБ, в браузере их не грузим.
+                  if (supportsOriginalWords)
+                    _Action(
+                      icon: Icons.translate_rounded,
+                      label: 'Слова оригинала',
+                      onTap: () => showOriginalWordsSheet(context,
+                          verses: verses, reference: reference),
+                    ),
                   _Action(
                     icon: Icons.compare_arrows_rounded,
                     label: 'Сравнить переводы',

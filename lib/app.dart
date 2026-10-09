@@ -15,8 +15,10 @@ import 'state/providers.dart';
 /// Разделы, наполнение которых придёт с бэкенда позже, скрыты флагом.
 /// Показывать заведомо пустые вкладки нельзя: App Store отклоняет сборки с
 /// «placeholder content» по правилу 2.1.
-const showUnreleasedSections =
-    bool.fromEnvironment('SHOW_UNRELEASED', defaultValue: false);
+const showUnreleasedSections = bool.fromEnvironment(
+  'SHOW_UNRELEASED',
+  defaultValue: false,
+);
 
 class BibleApp extends ConsumerWidget {
   const BibleApp({super.key});
@@ -87,8 +89,9 @@ class _BottomBar extends ConsumerWidget {
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 11,
-                            fontWeight:
-                                i == index ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: i == index
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             color: i == index ? c.accent : c.muted,
                           ),
                         ),
@@ -102,6 +105,23 @@ class _BottomBar extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// На широком экране приложение становится колонкой по центру.
+///
+/// Браузер открывают во весь монитор, а список людей во всю ширину нечитаем:
+/// имя у левого края, счётчик упоминаний у правого, глаз теряет строку. У
+/// чтения своя ширина колонки, здесь — общая рамка для всех вкладок. Телефону
+/// и планшету в портрете это ничего не меняет.
+Widget _column(BuildContext context, ReadingColors c, Widget child) {
+  const readable = 840.0;
+  if (MediaQuery.sizeOf(context).width <= readable) return child;
+  return ColoredBox(
+    color: c.background,
+    child: Center(
+      child: SizedBox(width: readable, height: double.infinity, child: child),
+    ),
+  );
 }
 
 class _Shell extends ConsumerWidget {
@@ -123,27 +143,33 @@ class _Shell extends ConsumerWidget {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(30),
-            child: Text('Не удалось открыть текст.\n$e',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Inter', color: c.muted)),
+            child: Text(
+              'Не удалось открыть текст.\n$e',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Inter', color: c.muted),
+            ),
           ),
         ),
       ),
-      data: (_) => Scaffold(
-        backgroundColor: c.background,
-        // IndexedStack, а не переключение экранов: читалка держит позицию
-        // прокрутки, и уходить из неё на другую вкладку нельзя ценой потери
-        // места, на котором человек остановился.
-        body: IndexedStack(
-          index: index,
-          children: const [
-            ReaderScreen(),
-            TodayScreen(),
-            ExploreScreen(),
-            LibraryScreen(),
-          ],
+      data: (_) => _column(
+        context,
+        c,
+        Scaffold(
+          backgroundColor: c.background,
+          // IndexedStack, а не переключение экранов: читалка держит позицию
+          // прокрутки, и уходить из неё на другую вкладку нельзя ценой потери
+          // места, на котором человек остановился.
+          body: IndexedStack(
+            index: index,
+            children: const [
+              ReaderScreen(),
+              TodayScreen(),
+              ExploreScreen(),
+              LibraryScreen(),
+            ],
+          ),
+          bottomNavigationBar: _BottomBar(index: index),
         ),
-        bottomNavigationBar: _BottomBar(index: index),
       ),
     );
   }

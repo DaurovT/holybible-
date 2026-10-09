@@ -9,7 +9,6 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -124,8 +123,6 @@ class AiService {
       throw const AiUnavailable(
           'Сервер не ответил вовремя. Попробуйте ещё раз — '
           'остальное приложение работает без сети.');
-    } on SocketException {
-      throw const AiUnavailable(_offline);
     } on http.ClientException {
       throw const AiUnavailable(_offline);
     } on FormatException {
