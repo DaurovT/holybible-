@@ -9,12 +9,8 @@
 ///     xcrun simctl boot "iPhone 17 Pro Max"
 ///     flutter drive -d "iPhone 17 Pro Max" \
 ///       --driver=test_driver/integration_test.dart \
-///       --target=integration_test/screenshots_test.dart \
-///       --dart-define=AI_ENDPOINT=https://holybible-api.eastus.cloudapp.azure.com
+///       --target=integration_test/screenshots_test.dart
 ///
-/// Адрес сервера нужен только затем, чтобы на панели отрывка были видны кнопки
-/// разбора: без него они скрыты. Сам разбор на симуляторе не работает — там нет
-/// App Attest, — поэтому кадра с ответом ИИ здесь нет, его снимают на телефоне.
 library;
 
 import 'dart:io';
@@ -66,13 +62,10 @@ void main() {
       await binding.takeScreenshot('$prefix$name');
     }
 
-    // 1. Отрывок выделен — на панели кнопки разбора.
+    // 1. Отрывок выделен — на панели действия над ним.
     await _tapWord(tester, 'нищие');
-    // На Android разбора нет (App Attest только у Apple) — ждём панель по
-    // соседней кнопке.
-    await _waitFor(
-        tester, find.text(Platform.isIOS ? 'Объяснить' : 'Параллельные места'));
-    await shot('01-razbor');
+    await _waitFor(tester, find.text('Параллельные места'));
+    await shot('01-otryvok');
 
     // 2. Слова оригинала к тому же стиху.
     await tester.ensureVisible(find.text('Слова оригинала'));

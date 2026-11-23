@@ -1,7 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Flutter объявляет INTERNET только в отладочном и профильном манифестах.
-         Без этой строки релиз не выходит в сеть вовсе. -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Приложение работает целиком офлайн: в сеть оно не ходит, и разрешение
+         INTERNET в релизном манифесте не нужно. -->
     <application
         android:label="Библия"
         android:name="${applicationName}"

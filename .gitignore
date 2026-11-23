@@ -60,3 +60,6 @@ app.*.map.json
 server/.venv/
 server/data/
 server/__pycache__/
+
+# Локальные настройки редактора
+.vscode/

@@ -1,8 +1,8 @@
 /// Панель действий над выделенным отрывком.
 ///
-/// Появляется, когда выбран хотя бы один стих. Набор действий взят из
-/// продуктовой задумки: объяснить, контекст, почему это важно, сравнить
-/// переводы, задать вопрос.
+/// Появляется, когда выбран хотя бы один стих: параллельные места, слова
+/// оригинала, сравнение переводов, свои пометки. Разбор с ИИ из приложения
+/// вырезан до лучших времён — код и сервер остались в истории git.
 library;
 
 import 'package:flutter/material.dart';
@@ -18,8 +18,6 @@ import '../../data/entity_repository.dart';
 import '../../data/models.dart';
 import '../../state/providers.dart';
 import '../../state/user_data.dart';
-import '../ai/ai_service.dart';
-import '../ai/explain_sheet.dart';
 import '../entity/entity_sheet.dart';
 import '../library/note_sheet.dart';
 import 'cross_refs_sheet.dart';
@@ -62,10 +60,6 @@ class PassageActionsBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = ref.watch(settingsProvider).colors;
-    // Без адреса сервера разбор не работает вовсе. Кнопка, которая всегда
-    // отвечает «недоступно», — это ровно то, за что App Store отклоняет
-    // сборку по правилу 2.1, поэтому в такой сборке кнопок ИИ нет.
-    final ai = ref.watch(aiServiceProvider).isConfigured;
 
     return Container(
       decoration: BoxDecoration(
@@ -112,31 +106,13 @@ class PassageActionsBar extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
               child: Row(
                 children: [
-                  if (ai)
-                    _Action(
-                      icon: Icons.auto_awesome_rounded,
-                      label: 'Объяснить',
-                      primary: true,
-                      onTap: () => _explain(context, ExplainMode.explain),
-                    ),
                   _Action(
                     icon: Icons.hub_outlined,
                     label: 'Параллельные места',
+                    primary: true,
                     onTap: () => showCrossRefsSheet(context,
                         verses: verses, reference: reference),
                   ),
-                  if (ai)
-                    _Action(
-                      icon: Icons.history_edu_rounded,
-                      label: 'Контекст',
-                      onTap: () => _explain(context, ExplainMode.context),
-                    ),
-                  if (ai)
-                    _Action(
-                      icon: Icons.lightbulb_outline_rounded,
-                      label: 'Почему это важно',
-                      onTap: () => _explain(context, ExplainMode.whyMatters),
-                    ),
                   // Слова оригинала — это ещё 25 МБ, в браузере их не грузим.
                   if (supportsOriginalWords)
                     _Action(
@@ -150,12 +126,6 @@ class PassageActionsBar extends ConsumerWidget {
                     label: 'Сравнить переводы',
                     onTap: () => _compare(context, ref),
                   ),
-                  if (ai)
-                    _Action(
-                      icon: Icons.help_outline_rounded,
-                      label: 'Задать вопрос',
-                      onTap: () => _explain(context, ExplainMode.ask),
-                    ),
                   _Action(
                     icon: Icons.copy_rounded,
                     label: 'Копировать',
@@ -180,15 +150,6 @@ class PassageActionsBar extends ConsumerWidget {
     );
   }
 
-  void _explain(BuildContext context, ExplainMode mode) {
-    showExplainSheet(
-      context,
-      mode: mode,
-      reference: reference,
-      text: plainText,
-      verses: verses,
-    );
-  }
 
   /// Показывает тот же отрывок в остальных переводах.
   Future<void> _compare(BuildContext context, WidgetRef ref) async {
