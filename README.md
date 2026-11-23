@@ -152,14 +152,15 @@ test/        39 тестов: user.db, разбор ссылок, USFM, кале
 
 1. **Войти в Xcode под аккаунтом PHARMIQ ACADEMY** (Settings → Accounts).
    Команда `XQ35SJRLQH` уже прописана в проекте, подпись автоматическая.
-2. **Выложить на сервер** свежие `privacy.html` и `support.html`: политика
-   теперь говорит, что приложение ничего не собирает, — так и есть.
+2. **Включить GitHub Pages** (Settings → Pages → ветка `gh-pages`): оттуда
+   отдаются политика конфиденциальности и страница поддержки, ссылки на них
+   обязательны в обоих сторах. Сервера у приложения больше нет.
 3. **App Store Connect.** Тексты, анкеты и заметки для ревьюера — в
    [docs/app-store.md](docs/app-store.md), скриншоты — в `docs/screenshots/`.
    В анкете App Privacy — «данные не собираются», ровно по
    [ios/Runner/PrivacyInfo.xcprivacy](ios/Runner/PrivacyInfo.xcprivacy);
-   ссылка на политику — `https://holybible-api.eastus.cloudapp.azure.com/privacy`,
-   Support URL — `…/support`; скриншоты только для iPhone. Сборка:
+   ссылка на политику — `https://daurovt.github.io/holybible-/privacy.html`,
+   Support URL — `…/support.html`; скриншоты только для iPhone. Сборка:
 
        flutter build ipa --release
 

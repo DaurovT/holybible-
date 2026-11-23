@@ -3,6 +3,13 @@
 Всё, что вводится руками при публикации. Поля идут в том порядке, в каком их
 спрашивает App Store Connect. Лимиты символов проверены.
 
+> Страницы политики и поддержки живут в ветке `gh-pages` этого репозитория:
+> приложение офлайновое, сервера больше нет. Чтобы адреса заработали, включите
+> GitHub Pages: Settings → Pages → Deploy from a branch → `gh-pages` / `/ (root)`.
+> Пока Pages не включены, можно временно дать ссылку на страницу
+> https://claude.ai/artifact/3S1YTh4iv4BEEnyuntX7pZ (её нужно открыть для всех
+> через меню Share).
+
 ## Приложение
 
 | Поле | Значение |
@@ -15,8 +22,8 @@
 | Основная категория | Справочники |
 | Дополнительная категория | Книги |
 | Copyright | © 2026 PHARMIQ ACADEMY, MChJ |
-| Privacy Policy URL | https://holybible-api.eastus.cloudapp.azure.com/privacy |
-| Support URL | https://holybible-api.eastus.cloudapp.azure.com/support |
+| Privacy Policy URL | https://daurovt.github.io/holybible-/privacy.html |
+| Support URL | https://daurovt.github.io/holybible-/support.html |
 | Цена | Бесплатно |
 
 Разбор с ИИ из приложения вырезан 23 ноября, поэтому прежнее название «Библия
@@ -157,13 +164,13 @@ Google Play. Лимиты проверены.
 | Пакет | com.holybible.holy_bible |
 | Категория | Книги и справочники |
 | Email разработчика | maylantim@gmail.com |
-| Политика конфиденциальности | https://holybible-api.eastus.cloudapp.azure.com/privacy |
+| Политика конфиденциальности | https://daurovt.github.io/holybible-/privacy.html |
 | Цена | Бесплатно, без рекламы и покупок |
 
-**Графика:** иконка 512 × 512 — `docs/store/play-icon-512.png`; баннер
-1024 × 500 нужно нарисовать; скриншоты телефона — из `docs/screenshots/`, но
-Google Play требует соотношение не длиннее 2:1, а наши кадры 1320 × 2868
-(2,17:1). Обрезать по высоте до 2640 px или переснять на экране пониже.
+**Графика:** иконка 512 × 512 — `docs/store/play-icon-512.png`, баннер
+1024 × 500 — `docs/store/play-feature-1024x500.png`, скриншоты —
+`docs/screenshots/play/` (те же кадры, обрезанные до 1320 × 2640: Google Play
+не принимает соотношение длиннее 2:1).
 
 **Data safety:** «No data collected» и «No data shared». Приложение офлайновое,
 разрешения `INTERNET` у него нет — это видно и по манифесту.
