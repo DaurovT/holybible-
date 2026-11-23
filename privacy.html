@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Библия: конфиденциальность и поддержка</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Inter:wght@400;500;600&display=swap">
+<style>
+  /* Документ в одну колонку: палитра и шрифты — те же, что в самом приложении. */
+  :root {
+    --bg: #fcfcfa;
+    --surface: #ffffff;
+    --fg: #1c1b19;
+    --muted: #6b6862;
+    --rule: #e8e5de;
+    --accent: #8a5a2b;
+    --display: "Literata", Georgia, "Times New Roman", serif;
+    --body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181a;
+      --surface: #1e2124;
+      --fg: #dcdcd8;
+      --muted: #9a9a94;
+      --rule: #2c2f33;
+      --accent: #c8a06a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181a;
+    --surface: #1e2124;
+    --fg: #dcdcd8;
+    --muted: #9a9a94;
+    --rule: #2c2f33;
+    --accent: #c8a06a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.62;
+  }
+  main {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding-block: 3rem 4rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(1.9rem, 1.2rem + 2.4vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h2 {
+    font-family: var(--display);
+    font-size: 1.22rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    text-wrap: balance;
+  }
+  p, li { margin: 0 0 0.7rem; }
+  p:last-child, li:last-child { margin-bottom: 0; }
+  ul { margin: 0; padding-left: 1.25rem; }
+  li::marker { color: var(--accent); }
+  a { color: var(--accent); }
+  header { display: flex; flex-direction: column; gap: 0.35rem; }
+  .meta { color: var(--muted); font-size: 0.93rem; }
+  .lead { font-size: 1.07rem; }
+  section { border-top: 1px solid var(--rule); padding-top: 1.5rem; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+  }
+  .contact { font-family: var(--body); font-weight: 600; }
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.4rem;
+    color: var(--muted);
+    font-size: 0.93rem;
+  }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <h1>Библия: конфиденциальность и поддержка</h1>
+    <p class="meta">Приложение «Библия — проводник по Писанию» для iPhone и Android · действует с 23 ноября 2026 года</p>
+  </header>
+
+  <p class="lead">Если коротко: приложение не собирает о вас никаких данных и
+  ничего никуда не отправляет. Оно работает целиком без интернета — у версии для
+  Android нет даже разрешения на доступ к сети.</p>
+
+  <section>
+    <h2>Что это значит на деле</h2>
+    <ul>
+      <li>Регистрации и аккаунтов нет. Имени, почты, телефона и местоположения приложение не спрашивает.</li>
+      <li>Рекламы, аналитики и сторонних систем слежения нет.</li>
+      <li>Текст Писания, справочник, карта и календарь вшиты в само приложение.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Что хранится на устройстве</h2>
+    <p>Закладки, выделения, заметки, место чтения и настройки лежат в памяти
+    вашего устройства. Мы их не видим: они никуда не передаются и удаляются
+    вместе с приложением.</p>
+  </section>
+
+  <section>
+    <h2>Версия для браузера</h2>
+    <p>Веб-версия один раз скачивает текст Писания и сохраняет его в хранилище
+    браузера, чтобы дальше работать без сети. Данных о вас при этом не
+    передаётся; закладки и заметки остаются в вашем браузере.</p>
+  </section>
+
+  <section>
+    <h2>Кому мы передаём данные</h2>
+    <p>Никому. Мы не собираем данные — значит, нечего и передавать. Мы ничего не
+    продаём рекламным сетям и другим компаниям.</p>
+  </section>
+
+  <section>
+    <h2>Дети</h2>
+    <p>Приложение не собирает личные данные и не требует их ни от кого, в том
+    числе от детей.</p>
+  </section>
+
+  <section>
+    <h2>Как удалить данные</h2>
+    <p>Удалите приложение — вместе с ним удалятся закладки, выделения и заметки.
+    В браузере достаточно очистить данные сайта.</p>
+  </section>
+
+  <section>
+    <h2>Поддержка</h2>
+    <p>Нашли ошибку в тексте, что-то не работает или есть вопрос — напишите нам.
+    Укажите модель устройства и версию системы, а если можно, приложите снимок
+    экрана.</p>
+    <div class="card">
+      <p class="contact">maylantim@gmail.com</p>
+      <p class="meta">PHARMIQ ACADEMY, MChJ</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Частые вопросы</h2>
+    <p><b>Нужен ли интернет?</b> Нет. Текст, поиск, карточки людей и мест,
+    карта, словарь, календарь, закладки и заметки работают без сети.</p>
+    <p><b>Как узнать, кто такой этот человек?</b> Нажмите на имя прямо в тексте —
+    откроется карточка со статьёй, роднёй и всеми упоминаниями.</p>
+    <p><b>Что ещё умеет приложение с выделенным стихом?</b> Выделите стих
+    нажатием: параллельные места, слова оригинала с номерами Стронга, сравнение
+    переводов, выделение цветом и заметка.</p>
+    <p><b>Куда делись закладки?</b> Они хранятся только на устройстве и
+    удаляются вместе с приложением. Синхронизации между устройствами пока нет.</p>
+  </section>
+
+  <section>
+    <h2>Изменения</h2>
+    <p>Если приложение научится чему-то, что потребует отправки данных, политика
+    изменится заранее: новая версия появится на этой странице с новой датой.</p>
+  </section>
+
+  <footer>
+    <p>Источники текста и данных: Синодальный перевод и World English Bible
+    (общественное достояние), «Библейская энциклопедия архимандрита Никифора»
+    (1891), данные Tyndale House Cambridge и OpenBible.info (CC BY 4.0), словарь
+    Стронга OpenScriptures (CC BY-SA), картографическая основа Natural Earth.</p>
+  </footer>
+</main>
+
+</body>
+</html>
